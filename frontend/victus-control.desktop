@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Victus Control
+Comment=Fan and RGB control application for Victus-s1000 laptops
+Exec=/usr/bin/victus-control
+Icon=victus-icon
+Terminal=false
+Type=Application
+Categories=Utility;

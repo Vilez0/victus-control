@@ -1,0 +1,11 @@
+[Unit]
+Description=Victus Control Backend Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/victus-backend
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
