@@ -27,6 +27,7 @@ VictusKeyboardControl::VictusKeyboardControl(std::shared_ptr<VictusSocketClient>
 	g_signal_connect(color_chooser, "color-set", G_CALLBACK(on_color_set), this);
 	g_signal_connect(apply_button, "clicked", G_CALLBACK(on_apply_clicked), this);
 
+	update_keyboard_state_from_device();
 	update_current_color_label(this);
 }
 
@@ -46,16 +47,21 @@ void VictusKeyboardControl::update_keyboard_state(bool enabled)
 		return;
 	}
 
+	update_keyboard_state_from_device();
+}
+
+void VictusKeyboardControl::update_keyboard_state_from_device()
+{
 	auto keyboard_state = socket_client->send_command_async(GET_KEYBOARD_ENABLE);
 	std::string szkeyboard_state = keyboard_state.get();
 
 	if (szkeyboard_state.find("ERROR") == std::string::npos)
 	{
-		bool current_state = (szkeyboard_state == "1");
-		gtk_button_set_label(GTK_BUTTON(toggle_button), current_state ? "Keyboard: ON" : "Keyboard: OFF");
+		keyboard_enabled = (szkeyboard_state == "1");
+		gtk_button_set_label(GTK_BUTTON(toggle_button), keyboard_enabled ? "Keyboard: ON" : "Keyboard: OFF");
 
 		if (current_state_label)
-			gtk_label_set_text(current_state_label, ("Current State: " + (current_state ? std::string("ON") : std::string("OFF"))).c_str());
+			gtk_label_set_text(current_state_label, ("Current State: " + (keyboard_enabled ? std::string("ON") : std::string("OFF"))).c_str());
 	}
 	else
 		std::cerr << "Failed to get current keyboard state!" << std::endl;
@@ -73,11 +79,8 @@ void VictusKeyboardControl::update_keyboard_color(const std::string &color)
 void VictusKeyboardControl::on_toggle_clicked(GtkWidget *widget, gpointer data)
 {
 	VictusKeyboardControl *self = static_cast<VictusKeyboardControl *>(data);
-
-	const char *current_label = gtk_button_get_label(GTK_BUTTON(widget));
-
-	bool enabled = std::string(current_label).find("OFF") != std::string::npos;
-	self->update_keyboard_state(enabled);
+	self->keyboard_enabled = !self->keyboard_enabled;
+	gtk_button_set_label(GTK_BUTTON(widget), self->keyboard_enabled ? "Keyboard: ON" : "Keyboard: OFF");
 }
 
 void VictusKeyboardControl::on_color_set(GtkColorChooser *widget, gpointer data)
@@ -107,16 +110,19 @@ void VictusKeyboardControl::on_apply_clicked(GtkWidget *widget, gpointer data)
 
 	self->update_keyboard_color(hex_color);
 
+	self->update_keyboard_state(self->keyboard_enabled);
+
+	self->update_keyboard_state_from_device();
+
 	self->update_current_color_label(self);
 }
 
-gboolean VictusKeyboardControl::update_current_color_label(gpointer data)
+void VictusKeyboardControl::update_current_color_label(gpointer data)
 {
 	VictusKeyboardControl *self = static_cast<VictusKeyboardControl *>(data);
 
 	auto current_color = self->socket_client->send_command_async(GET_RGB);
+	std::string szcurrent_color = current_color.get();
 
-	gtk_label_set_text(self->current_color_label, ("Current Color: " + current_color.get()).c_str());
-
-	return FALSE; // AVSARTODO
+	gtk_label_set_text(self->current_color_label, ("Current Color: " + szcurrent_color).c_str());
 }

@@ -2,7 +2,7 @@
 
 **victus-control** is a software for HP Victus 16-s1000 laptops with fan control and RGB keyboard settings.
 
-**IMPORTANT** You need to use [my fork](https://github.com/lustryrose882/betel-wmi-management) to make this work.
+**IMPORTANT:** You need to use [my fork](https://github.com/lustryrose882/betel-wmi-management) to make this work.
 
 ## Features
 
@@ -77,9 +77,9 @@ I swear this is my first time writing a GTK application, I need help to fix the 
 
 If you'd like to contribute to the project, please follow these steps:
 
-Fork the repository.
-Make your changes.
-Submit a pull request.
+Fork the repository, make your changes, submit a pull request.
+
+Any contribution is welcome!!
 
 ## License
 This project is licensed under the GPL3 License. See the LICENSE file for more details.

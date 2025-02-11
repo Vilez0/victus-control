@@ -142,7 +142,7 @@ void handle_command(const std::string &command, int client_socket)
 
 				fan_mode.erase(fan_mode.find_last_not_of(" \n\r\t") + 1);
 
-				std::cerr << "Fan mode: " << fan_mode << std::endl;
+				//std::cout << "Fan mode: " << fan_mode << std::endl;
 
 				if (fan_mode == "2")
 					response = "AUTO";
@@ -163,7 +163,7 @@ void handle_command(const std::string &command, int client_socket)
 			response = "ERROR: Hwmon directory not found";
 		}
 
-		std::cerr << "Response: " << response << std::endl;
+		//std::cout << "Response: " << response << std::endl;
 	}
 	else if (command == "GET_RGB")
 	{
