@@ -74,7 +74,7 @@ void handle_command(const std::string &command, int client_socket)
 
 		if (!hwmon_path.empty())
 		{
-			std::ifstream fan_file(hwmon_path + "/fan1_input");
+			std::ifstream fan_file(hwmon_path + "/fan2_input");
 			if (fan_file)
 			{
 				std::stringstream buffer;
