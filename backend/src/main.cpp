@@ -142,7 +142,7 @@ void handle_command(const std::string &command, int client_socket)
 		std::string color = command.substr(19);
 
 		std::ofstream rgb("/sys/class/leds/hp::kbd_backlight/multi_intensity");
-		if (rgb && color)
+		if (rgb && color.size() > 4) // it should be at least 5 chars because "R G B" with spaces
 		{
             rgb << color;
 			std::cout << "Setting keyboard color to: " << color << std::endl;
