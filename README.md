@@ -1,8 +1,11 @@
 # victus-control
 
-**victus-control** is a software for HP Victus 16-s1000 laptops with fan control and RGB keyboard settings.
+> [!NOTE]
+> This is an initial UI based on https://github.com/betelqeyza/victus-control, expect missing features and major frontend UI changes (it's planned, not the main focus tho)
 
-**IMPORTANT:** You need to use [my fork](https://github.com/lustryrose882/betel-wmi-management) to make this work.
+**victus-control** is a software for HP Victus and Omen laptops with fan control and RGB keyboard settings.
+
+**IMPORTANT:** You need to use [my hp-wmi fork](https://github.com/Vilez0/hp-wmi-fan-and-backlight-control) to make this work.
 
 ## Features
 
@@ -38,7 +41,7 @@ sudo apt-get install meson ninja-build libgtk-4-dev systemd
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/lustryrose882/victus-control
+git clone https://github.com/Vilez0/victus-control
 cd victus-control
 ```
 
@@ -73,8 +76,6 @@ With victus-control, you can:
 - Change keyboard backlighting colors and toggle on/off.
 
 ## Contributing
-I swear this is my first time writing a GTK application, I need help to fix the current problems.
-
 If you'd like to contribute to the project, please follow these steps:
 
 Fork the repository, make your changes, submit a pull request.
