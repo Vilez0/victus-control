@@ -9,13 +9,12 @@ VictusSocketClient::VictusSocketClient(const std::string &path) : socket_path(pa
 {
 	command_prefix_map = {
 		{GET_FAN_SPEED, "GET_FAN_SPEED"},
-		{GET_FAN_SPEED2, "GET_FAN_SPEED2"},
-		{SET_FAN, "SET_FAN "},
-		{GET_FAN, "GET_FAN"},
-		{GET_RGB, "GET_RGB"},
-		{SET_RGB, "SET_RGB "},
-		{GET_KEYBOARD_ENABLE, "GET_KEYBOARD_ENABLE"},
-		{SET_KEYBOARD_ENABLE, "SET_KEYBOARD_ENABLE "},
+		{SET_FAN_MODE, "SET_FAN_MODE"},
+		{GET_FAN_MODE, "GET_FAN_MODE"},
+		{GET_KEYBOARD_COLOR, "GET_KEYBOARD_COLOR"},
+		{SET_KEYBOARD_COLOR, "SET_KEYBOARD_COLOR"},
+		{GET_KBD_BRIGHTNESS, "GET_KBD_BRIGHTNESS"},
+		{SET_KBD_BRIGHTNESS, "SET_KBD_BRIGHTNESS"},
 	};
 
 	if (!connect_to_server())
@@ -90,11 +89,18 @@ std::future<std::string> VictusSocketClient::send_command_async(ServerCommands t
 		if (it != command_prefix_map.end())
 		{
 			std::string full_command = it->second;
-			if (!command.empty() && it->second.back() == ' ')
+			if (!command.empty())
 			{
+				if (it->second.back() != ' ')
+				{
+					full_command += " ";
+				}
 				full_command += command;
 			}
-			return send_command(full_command);
+			std::cout << "Sending command: " << full_command << std::endl;
+			auto result = send_command(full_command);
+			std::cout << "Received response: " << result << std::endl;
+			return result;
 		}
 		return std::string("ERROR: Unknown command type"); });
 }

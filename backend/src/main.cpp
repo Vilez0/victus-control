@@ -7,43 +7,24 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <dirent.h>
 #include <string>
+#include "util.hpp"
 
-#define SOCKET_PATH "/tmp/victus_backend.sock"
-
-std::string find_hwmon_directory(const std::string &base_path)
-{
-	DIR *dir;
-	struct dirent *ent;
-	std::string hwmon_path;
-
-	if ((dir = opendir(base_path.c_str())) != nullptr)
-	{
-		while ((ent = readdir(dir)) != nullptr)
-		{
-			if (std::string(ent->d_name).find("hwmon") != std::string::npos)
-			{
-				hwmon_path = base_path + "/" + ent->d_name;
-				break;
-			}
-		}
-		closedir(dir);
-	}
-	return hwmon_path;
-}
+#define SOCKET_DIR "/var/run/victus-control"
+#define SOCKET_PATH SOCKET_DIR "/victus_backend.sock"
 
 void handle_command(const std::string &command, int client_socket)
 {
 	std::string response;
 
-	if (command == "GET_FAN_SPEED")
+	if (command.find("GET_FAN_SPEED") == 0)
 	{
+		std::string fan_num = command.substr(14);
 		std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
 
 		if (!hwmon_path.empty())
 		{
-			std::ifstream fan_file(hwmon_path + "/fan1_input");
+			std::ifstream fan_file(hwmon_path + "/fan" + fan_num + "_input");
 
 			if (fan_file)
 			{
@@ -68,39 +49,9 @@ void handle_command(const std::string &command, int client_socket)
 			response = "ERROR: Hwmon directory not found";
 		}
 	}
-	else if (command == "GET_FAN_SPEED2")
+	else if (command.find("SET_FAN_MODE") == 0)
 	{
-		std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
-
-		if (!hwmon_path.empty())
-		{
-			std::ifstream fan_file(hwmon_path + "/fan2_input");
-			if (fan_file)
-			{
-				std::stringstream buffer;
-				buffer << fan_file.rdbuf();
-
-				std::string fan_speed2 = buffer.str();
-
-				fan_speed2.erase(fan_speed2.find_last_not_of(" \n\r\t") + 1);
-
-				response = fan_speed2;
-			}
-			else
-			{
-				std::cerr << "Failed to open fan speed file. Error: " << strerror(errno) << std::endl;
-				response = "ERROR: Unable to read fan speed";
-			}
-		}
-		else
-		{
-			std::cerr << "Hwmon directory not found" << std::endl;
-			response = "ERROR: Hwmon directory not found";
-		}
-	}
-	else if (command.find("SET_FAN") == 0)
-	{
-		std::string mode = command.substr(8);
+		std::string mode = command.substr(13); // 1 more char for the space
 		std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
 
 		if (!hwmon_path.empty())
@@ -111,6 +62,8 @@ void handle_command(const std::string &command, int client_socket)
 			{
 				if (mode == "AUTO")
 					fan_ctrl << "2";
+				else if (mode == "MANUAL")
+					fan_ctrl << "1";
 				else if (mode == "MAX")
 					fan_ctrl << "0";
 
@@ -125,7 +78,7 @@ void handle_command(const std::string &command, int client_socket)
 			response = "ERROR: Hwmon directory not found";
 		}
 	}
-	else if (command == "GET_FAN")
+	else if (command == "GET_FAN_MODE")
 	{
 		std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
 
@@ -146,6 +99,8 @@ void handle_command(const std::string &command, int client_socket)
 
 				if (fan_mode == "2")
 					response = "AUTO";
+				else if (fan_mode == "1")
+					response = "MANUAL";
 				else if (fan_mode == "0")
 					response = "MAX";
 				else
@@ -165,9 +120,9 @@ void handle_command(const std::string &command, int client_socket)
 
 		//std::cout << "Response: " << response << std::endl;
 	}
-	else if (command == "GET_RGB")
+	else if (command == "GET_KEYBOARD_COLOR")
 	{
-		std::ifstream rgb("/sys/devices/platform/hp-wmi/keyboard_color");
+		std::ifstream rgb("/sys/class/leds/hp::kbd_backlight/multi_intensity");
 
 		if (rgb)
 		{
@@ -182,56 +137,50 @@ void handle_command(const std::string &command, int client_socket)
 		else
 			response = "ERROR: RGB File not found";
 	}
-	else if (command.find("SET_RGB") == 0)
+	else if (command.find("SET_KEYBOARD_COLOR") == 0)
 	{
-		std::string color = command.substr(8);
+		std::string color = command.substr(19);
 
-		std::ofstream rgb("/sys/devices/platform/hp-wmi/keyboard_color");
-		if (rgb && color.size() == 6)
+		std::ofstream rgb("/sys/class/leds/hp::kbd_backlight/multi_intensity");
+		if (rgb && color)
 		{
-			// I hate my life
-			int r_val = std::stoi(color.substr(0, 2), nullptr, 16);
-			int g_val = std::stoi(color.substr(2, 2), nullptr, 16);
-			int b_val = std::stoi(color.substr(4, 2), nullptr, 16);
-
-			rgb << std::setw(2) << std::setfill('0') << std::hex << r_val
-				<< std::setw(2) << std::setfill('0') << std::hex << g_val
-				<< std::setw(2) << std::setfill('0') << std::hex << b_val;
-			rgb.close();
+            rgb << color;
+			std::cout << "Setting keyboard color to: " << color << std::endl;
+            rgb.close();
 
 			response = "OK";
 		}
 		else
 			response = "ERROR: Invalid RGB command";
 	}
-	else if (command == "GET_KEYBOARD_ENABLE")
+	else if (command == "GET_KBD_BRIGHTNESS")
 	{
-		std::ifstream keyboard_enable("/sys/devices/platform/hp-wmi/keyboard_enable");
+		std::ifstream brightness("/sys/class/leds/hp::kbd_backlight/brightness");
 
-		if (keyboard_enable)
+		if (brightness)
 		{
 			std::stringstream buffer;
-			buffer << keyboard_enable.rdbuf();
+			buffer << brightness.rdbuf();
 
-			std::string keyboard_enable_mode = buffer.str();
-			keyboard_enable_mode.erase(keyboard_enable_mode.find_last_not_of(" \n\r\t") + 1);
+			std::string keyboard_brightness = buffer.str();
+			keyboard_brightness.erase(keyboard_brightness.find_last_not_of(" \n\r\t") + 1);
 
-			response = keyboard_enable_mode;
+			response = keyboard_brightness;
 		}
 		else
-			response = "ERROR: Keyboard Enable File not found";
+			response = "ERROR: Keyboard Brightness File not found";
 	}
-	else if (command.find("SET_KEYBOARD_ENABLE") == 0)
+	else if (command.find("SET_KBD_BRIGHTNESS") == 0)
 	{
-		std::string value = command.substr(20);
-		std::ofstream keyboard_enable("/sys/devices/platform/hp-wmi/keyboard_enable");
-		if (keyboard_enable)
+		std::string value = command.substr(19);
+		std::ofstream brightness("/sys/class/leds/hp::kbd_backlight/brightness");
+		if (brightness)
 		{
-			keyboard_enable << value;
+			brightness << value;
 			response = "OK";
 		}
 		else
-			response = "ERROR: Invalid Keyboard Enable command";
+			response = "ERROR: Invalid Keyboard Brightness command";
 	}
 	else
 		response = "ERROR: Unknown command";
@@ -250,6 +199,12 @@ int main()
 	struct sockaddr_un server_addr;
 
 	unlink(SOCKET_PATH);
+
+	if (mkdir(SOCKET_DIR, 0755) < 0 && errno != EEXIST)
+	{
+		std::cerr << "Failed to create socket directory" << std::endl;
+		return 1;
+	}
 
 	server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (server_socket < 0)

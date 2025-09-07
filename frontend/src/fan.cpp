@@ -48,7 +48,7 @@ GtkWidget *VictusFanControl::get_page()
 
 void VictusFanControl::update_current_state()
 {
-	auto response = socket_client->send_command_async(GET_FAN);
+	auto response = socket_client->send_command_async(GET_FAN_MODE);
 	std::string fan_state = response.get();
 
 	if (fan_state == "AUTO" || fan_state == "MAX")
@@ -72,10 +72,10 @@ void VictusFanControl::update_fan_mode(bool automatic)
 
 void VictusFanControl::update_fan_speeds()
 {
-	auto response1 = socket_client->send_command_async(GET_FAN_SPEED);
+	auto response1 = socket_client->send_command_async(GET_FAN_SPEED, "1");
 	std::string fan1_speed = response1.get();
 
-	auto response2 = socket_client->send_command_async(GET_FAN_SPEED2);
+	auto response2 = socket_client->send_command_async(GET_FAN_SPEED, "2");
 	std::string fan2_speed = response2.get();
 
 	std::string fan1_text = "Fan1 Speed: " + fan1_speed + " RPM";
@@ -105,7 +105,7 @@ void VictusFanControl::on_apply_clicked(GtkWidget *widget, gpointer data)
 
 	std::string command = self->automatic_mode ? "AUTO" : "MAX";
 
-	auto response = self->socket_client->send_command_async(SET_FAN, command);
+	auto response = self->socket_client->send_command_async(SET_FAN_MODE, command);
 	std::string response2 = response.get();
 
 	if (response2 == "OK")

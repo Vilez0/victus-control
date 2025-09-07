@@ -24,7 +24,7 @@ public:
 	VictusAbout about;
 
 	VictusControl()
-		: socket_client(std::make_shared<VictusSocketClient>("/tmp/victus_backend.sock")),
+		: socket_client(std::make_shared<VictusSocketClient>("/var/run/victus-control/victus_backend.sock")),
 		  fan_control(socket_client),
 		  keyboard_control(socket_client)
 	{

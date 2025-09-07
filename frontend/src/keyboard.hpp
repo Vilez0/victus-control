@@ -26,7 +26,7 @@ private:
 	void update_keyboard_state(bool enabled);
 	void update_keyboard_state_from_device();
 
-	void update_keyboard_color(const std::string &color);
+	void update_keyboard_color(const GdkRGBA &color);
 
 	static void on_toggle_clicked(GtkWidget *widget, gpointer data);
 	static void on_color_set(GtkColorChooser *widget, gpointer data);
