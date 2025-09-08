@@ -10,10 +10,10 @@
 
 // call set_fan_mode every 100 seconds so that the mode doesn't revert back (weird hp behaviour)
 void fan_mode_trigger(const std::string mode) {
+	if (mode != "MAX") return;
     std::thread([mode]() {
         while (true) {
-            if (get_fan_mode() != mode) {
-				// TODO: implement a logic that will send a message to the frontend about the new mode
+            if (get_fan_mode() != "MAX") {
                 std::cout << "Fan mode changed from " << mode << " to " << get_fan_mode() << std::endl;
                 break;
             }
