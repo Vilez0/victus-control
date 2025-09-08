@@ -10,16 +10,14 @@
 
 // call set_fan_mode every 100 seconds so that the mode doesn't revert back (weird hp behaviour)
 void fan_mode_trigger(const std::string mode) {
-	if (mode != "MAX") return;
+	if (mode == "AUTO") return;
     std::thread([mode]() {
         while (true) {
-            if (get_fan_mode() != "MAX") {
-                std::cout << "Fan mode changed from " << mode << " to " << get_fan_mode() << std::endl;
+            if (get_fan_mode() != mode) {
                 break;
             }
 
             set_fan_mode(mode);
-            std::cout << "Fan mode set to " << mode << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(100));
         }
     }).detach();
@@ -120,4 +118,25 @@ std::string get_fan_speed(const std::string &fan_num)
 		std::cerr << "Hwmon directory not found" << std::endl;
 		return "ERROR: Hwmon directory not found";
 	}
+}
+
+std::string set_fan_speed(const std::string &fan_num, const std::string &speed)
+{
+	std::cout << "Setting fan " << fan_num << " speed to " << speed << std::endl;
+	std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
+
+	if (!hwmon_path.empty())
+	{
+		std::ofstream fan_file(hwmon_path + "/fan" + fan_num + "_target");
+
+		if (fan_file)
+		{
+			fan_file << speed;
+			return "OK";
+		}
+		else
+			return "ERROR: Unable to set fan speed";
+	}
+	else
+		return "ERROR: Hwmon directory not found";
 }

@@ -19,6 +19,12 @@ void handle_command(const std::string &command, int client_socket)
 	{
 		response = get_fan_speed(command.substr(14));
 	}
+	else if (command.find("SET_FAN_SPEED") == 0)
+	{
+		std::string fan_num = command.substr(14, 1);
+		std::string speed = command.substr(16);
+		response = set_fan_speed(fan_num, speed);
+	}
 	else if (command.find("SET_FAN_MODE") == 0)
 	{
 		std::string mode = command.substr(13); // 1 more char for the space
