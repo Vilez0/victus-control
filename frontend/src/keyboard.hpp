@@ -29,7 +29,7 @@ private:
 	void update_keyboard_color(const GdkRGBA &color);
 
 	static void on_toggle_clicked(GtkWidget *widget, gpointer data);
-	static void on_color_set(GtkColorChooser *widget, gpointer data);
+	static void on_color_activated(GtkColorChooser *widget, gpointer data);
 	static void on_apply_clicked(GtkWidget *widget, gpointer data);
 	static void update_current_color_label(gpointer data);
 

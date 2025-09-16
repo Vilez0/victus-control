@@ -24,7 +24,7 @@ VictusKeyboardControl::VictusKeyboardControl(std::shared_ptr<VictusSocketClient>
 	gtk_box_append(GTK_BOX(keyboard_page), GTK_WIDGET(current_state_label));
 
 	g_signal_connect(toggle_button, "clicked", G_CALLBACK(on_toggle_clicked), this);
-	g_signal_connect(color_chooser, "color-set", G_CALLBACK(on_color_set), this);
+	g_signal_connect(color_chooser, "color-activated", G_CALLBACK(on_color_activated), this);
 	g_signal_connect(apply_button, "clicked", G_CALLBACK(on_apply_clicked), this);
 
 	update_keyboard_state_from_device();
@@ -84,10 +84,10 @@ void VictusKeyboardControl::on_toggle_clicked(GtkWidget *widget, gpointer data)
 {
 	VictusKeyboardControl *self = static_cast<VictusKeyboardControl *>(data);
 	self->keyboard_enabled = !self->keyboard_enabled;
-	gtk_button_set_label(GTK_BUTTON(widget), self->keyboard_enabled ? "Keyboard: ON" : "Keyboard: OFF");
+	self->update_keyboard_state(self->keyboard_enabled);
 }
 
-void VictusKeyboardControl::on_color_set(GtkColorChooser *widget, gpointer data)
+void VictusKeyboardControl::on_color_activated(GtkColorChooser *widget, gpointer data)
 {
 	VictusKeyboardControl *self = static_cast<VictusKeyboardControl *>(data);
 

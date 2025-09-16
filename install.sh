@@ -98,8 +98,11 @@ echo "Application built and installed."
 echo "--> Creating udev rule for fan control permissions..."
 cat << 'EOF' > /etc/udev/rules.d/99-hp-wmi-permissions.rules
 # Grant victus group write access to HP WMI fan control files.
-# This rule specifically targets the hwmon device created by the hp-wmi driver.
 SUBSYSTEM=="hwmon", ATTR{name}=="hp", DRIVERS=="hp-wmi", ACTION=="add", RUN+="/bin/sh -c 'chgrp victus /sys%p/pwm1_enable && chmod g+w /sys%p/pwm1_enable'"
+
+# Grant victus group write access to HP WMI keyboard backlight files.
+SUBSYSTEM=="leds", KERNEL=="hp::kbd_backlight", ACTION=="add", RUN+="/bin/sh -c 'chgrp victus /sys%p/brightness && chmod g+w /sys%p/brightness'"
+SUBSYSTEM=="leds", KERNEL=="hp::kbd_backlight", ACTION=="add", RUN+="/bin/sh -c 'chgrp victus /sys%p/multi_intensity && chmod g+w /sys%p/multi_intensity'"
 EOF
 echo "Udev rule created."
 
