@@ -7,3 +7,14 @@ install_data(
 	'victus-backend.service',
 	install_dir: '/etc/systemd/system'
 )
+
+install_data(
+    'victus-control.rules',
+    install_dir: '/etc/udev/rules.d'
+)
+
+install_data(
+    'victus-control.tmpfiles',
+    install_dir: '/etc/tmpfiles.d',
+    rename: 'victus-control.conf'
+)

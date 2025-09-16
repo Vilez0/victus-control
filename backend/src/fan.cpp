@@ -4,21 +4,25 @@
 #include <sys/un.h>
 #include <thread>
 #include <chrono>
+#include <atomic>
 
 #include "fan.hpp"
 #include "util.hpp"
 
+static std::atomic<int> fan_thread_generation(0);
+
 // call set_fan_mode every 100 seconds so that the mode doesn't revert back (weird hp behaviour)
 void fan_mode_trigger(const std::string mode) {
+    fan_thread_generation++;
 	if (mode == "AUTO") return;
-    std::thread([mode]() {
-        while (true) {
-            if (get_fan_mode() != mode) {
-                break;
-            }
 
+    std::thread([mode, gen = fan_thread_generation.load()]() {
+        while (fan_thread_generation == gen) {
             set_fan_mode(mode);
-            std::this_thread::sleep_for(std::chrono::seconds(100));
+            for (int i = 0; i < 100; ++i) {
+                if (fan_thread_generation != gen) return;
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
         }
     }).detach();
 }

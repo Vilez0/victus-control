@@ -4,12 +4,45 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <string>
+#include <vector>
+#include <cstdint>
 
 #include "fan.hpp"
 #include "keyboard.hpp"
 
-#define SOCKET_DIR "/var/run/victus-control"
+#define SOCKET_DIR "/run/victus-control"
 #define SOCKET_PATH SOCKET_DIR "/victus_backend.sock"
+
+// Helper function to reliably send a block of data
+bool send_all(int socket, const void *buffer, size_t length) {
+    const char *ptr = static_cast<const char*>(buffer);
+    while (length > 0) {
+        ssize_t bytes_sent = send(socket, ptr, length, 0);
+        if (bytes_sent < 1) {
+            std::cerr << "Failed to send data" << std::endl;
+            return false;
+        }
+        ptr += bytes_sent;
+        length -= bytes_sent;
+    }
+    return true;
+}
+
+// Helper function to reliably read a block of data
+bool read_all(int socket, void *buffer, size_t length) {
+    char *ptr = static_cast<char*>(buffer);
+    while (length > 0) {
+        ssize_t bytes_read = read(socket, ptr, length);
+        if (bytes_read < 1) {
+            // Client disconnected or error
+            return false;
+        }
+        ptr += bytes_read;
+        length -= bytes_read;
+    }
+    return true;
+}
+
 
 void handle_command(const std::string &command, int client_socket)
 {
@@ -56,8 +89,9 @@ void handle_command(const std::string &command, int client_socket)
 	else
 		response = "ERROR: Unknown command";
 
-	if (send(client_socket, response.c_str(), response.length(), 0) < 0)
-		std::cerr << "Failed to send response" << std::endl;
+    uint32_t len = response.length();
+    if (!send_all(client_socket, &len, sizeof(len))) return;
+    if (!send_all(client_socket, response.c_str(), len)) return;
 }
 
 int main()
@@ -67,38 +101,35 @@ int main()
 
 	unlink(SOCKET_PATH);
 
-	if (mkdir(SOCKET_DIR, 0755) < 0 && errno != EEXIST)
-	{
-		std::cerr << "Failed to create socket directory" << std::endl;
-		return 1;
-	}
-
 	server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (server_socket < 0)
 	{
-		std::cerr << "Error creating socket" << std::endl;
+		std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
 		return 1;
 	}
 
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sun_family = AF_UNIX;
-	strcpy(server_addr.sun_path, SOCKET_PATH);
+	strncpy(server_addr.sun_path, SOCKET_PATH, sizeof(server_addr.sun_path) - 1);
 
 	if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
 	{
-		std::cerr << "Bind failed" << std::endl;
+		std::cerr << "Bind failed: " << strerror(errno) << std::endl;
+		close(server_socket);
 		return 1;
 	}
 
-	if (chmod(SOCKET_PATH, 0666) < 0)
+	if (chmod(SOCKET_PATH, 0660) < 0)
 	{
-		std::cerr << "Failed to set socket permissions" << std::endl;
+		std::cerr << "Failed to set socket permissions: " << strerror(errno) << std::endl;
+		close(server_socket);
 		return 1;
 	}
 
 	if (listen(server_socket, 5) < 0)
 	{
-		std::cerr << "Listen failed" << std::endl;
+		std::cerr << "Listen failed: " << strerror(errno) << std::endl;
+		close(server_socket);
 		return 1;
 	}
 
@@ -117,15 +148,24 @@ int main()
 
 		while (true)
 		{
-			char buffer[256] = {0};
-			ssize_t bytes_received = read(client_socket, buffer, sizeof(buffer) - 1);
-			if (bytes_received <= 0)
-			{
-				std::cerr << "Client disconnected or error occurred.\n";
-				break;
-			}
+            uint32_t cmd_len;
+            if (!read_all(client_socket, &cmd_len, sizeof(cmd_len))) {
+                std::cerr << "Client disconnected or error occurred while reading command length.\n";
+                break;
+            }
 
-			handle_command(buffer, client_socket);
+            if (cmd_len > 1024) { // Basic sanity check
+                std::cerr << "Command too long. Closing connection.\n";
+                break;
+            }
+
+            std::vector<char> buffer(cmd_len);
+            if (!read_all(client_socket, buffer.data(), cmd_len)) {
+                std::cerr << "Client disconnected or error occurred while reading command.\n";
+                break;
+            }
+
+			handle_command(std::string(buffer.begin(), buffer.end()), client_socket);
 		}
 
 		close(client_socket);

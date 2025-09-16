@@ -4,6 +4,36 @@
 #include <unistd.h>
 #include <iostream>
 #include <cstring>
+#include <vector>
+
+// Helper function to reliably send a block of data
+bool send_all(int socket, const void *buffer, size_t length) {
+    const char *ptr = static_cast<const char*>(buffer);
+    while (length > 0) {
+        ssize_t bytes_sent = send(socket, ptr, length, 0);
+        if (bytes_sent < 1) {
+            return false;
+        }
+        ptr += bytes_sent;
+        length -= bytes_sent;
+    }
+    return true;
+}
+
+// Helper function to reliably read a block of data
+bool read_all(int socket, void *buffer, size_t length) {
+    char *ptr = static_cast<char*>(buffer);
+    while (length > 0) {
+        ssize_t bytes_read = recv(socket, ptr, length, 0);
+        if (bytes_read < 1) {
+            return false;
+        }
+        ptr += bytes_read;
+        length -= bytes_read;
+    }
+    return true;
+}
+
 
 VictusSocketClient::VictusSocketClient(const std::string &path) : socket_path(path), sockfd(-1)
 {
@@ -17,8 +47,7 @@ VictusSocketClient::VictusSocketClient(const std::string &path) : socket_path(pa
 		{SET_KBD_BRIGHTNESS, "SET_KBD_BRIGHTNESS"},
 	};
 
-	if (!connect_to_server())
-		throw std::runtime_error("Failed to connect to server");
+	// Don't connect here, connect on first command
 }
 
 VictusSocketClient::~VictusSocketClient()
@@ -28,15 +57,16 @@ VictusSocketClient::~VictusSocketClient()
 
 bool VictusSocketClient::connect_to_server()
 {
-	std::cout << "Connecting to server...\n";
+	if (sockfd != -1) {
+        return true;
+    }
 
-	if (sockfd != -1)
-		close_socket();
+	std::cout << "Connecting to server..." << std::endl;
 
 	sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sockfd == -1)
 	{
-		std::cerr << "Cannot create socket!\n";
+		std::cerr << "Cannot create socket: " << strerror(errno) << std::endl;
 		return false;
 	}
 
@@ -47,38 +77,64 @@ bool VictusSocketClient::connect_to_server()
 
 	if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
 	{
-		std::cerr << "Failed to connect to the server!\n";
+		std::cerr << "Failed to connect to the server: " << strerror(errno) << std::endl;
 		close(sockfd);
 		sockfd = -1;
 		return false;
 	}
 
-	std::cout << "Connection to server successful.\n";
-
+	std::cout << "Connection to server successful." << std::endl;
 	return true;
 }
 
 void VictusSocketClient::close_socket()
 {
-	std::cout << "Closing the connection...\n";
-
-	if (sockfd != -1)
+	if (sockfd != -1) {
+        std::cout << "Closing the connection..." << std::endl;
 		close(sockfd);
-
-	std::cout << "Connection closed.\n";
+        sockfd = -1;
+        std::cout << "Connection closed." << std::endl;
+    }
 }
 
 std::string VictusSocketClient::send_command(const std::string &command)
 {
-	if (sockfd == -1 && !connect_to_server())
-		return "ERROR: No server connection?";
+    std::lock_guard<std::mutex> lock(socket_mutex);
 
-	send(sockfd, command.c_str(), command.size(), 0);
-	char buffer[256];
-	memset(buffer, 0, sizeof(buffer));
+	if (sockfd == -1) {
+        if (!connect_to_server()) {
+		    return "ERROR: No server connection";
+        }
+    }
 
-	recv(sockfd, buffer, sizeof(buffer) - 1, 0);
-	return std::string(buffer);
+    uint32_t len = command.length();
+    if (!send_all(sockfd, &len, sizeof(len)) || !send_all(sockfd, command.c_str(), len)) {
+        std::cerr << "Failed to send command, closing socket." << std::endl;
+        close_socket();
+        return "ERROR: Failed to send command";
+    }
+
+    uint32_t response_len;
+    if (!read_all(sockfd, &response_len, sizeof(response_len))) {
+        std::cerr << "Failed to read response length, closing socket." << std::endl;
+        close_socket();
+        return "ERROR: Failed to read response length";
+    }
+
+    if (response_len > 4096) { // Sanity check
+        std::cerr << "Response too long, closing socket." << std::endl;
+        close_socket();
+        return "ERROR: Response too long";
+    }
+
+    std::vector<char> buffer(response_len);
+    if (!read_all(sockfd, buffer.data(), response_len)) {
+        std::cerr << "Failed to read response, closing socket." << std::endl;
+        close_socket();
+        return "ERROR: Failed to read response";
+    }
+
+	return std::string(buffer.begin(), buffer.end());
 }
 
 std::future<std::string> VictusSocketClient::send_command_async(ServerCommands type, const std::string &command)

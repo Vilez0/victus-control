@@ -5,6 +5,7 @@
 #include <future>
 #include <unordered_map>
 #include <functional>
+#include <mutex>
 
 enum ServerCommands
 {
@@ -33,6 +34,7 @@ private:
 	void close_socket();
 
 	int sockfd;
+    std::mutex socket_mutex;
 
 	std::unordered_map<ServerCommands, std::string> command_prefix_map;
 };

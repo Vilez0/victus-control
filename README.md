@@ -20,54 +20,29 @@
 - **GTK4**: The frontend is developed using GTK4.
 - **Systemd**: Backend runs as a systemd service.
 
-## Installation
+## Recent Fixes
 
-### 1. Install Dependencies
+- **Major Permissions Overhaul**: The application's permissions model has been completely reworked to be secure and reliable. The backend now runs as a dedicated, non-privileged user (`victus-backend`), and a custom `udev` rule automatically handles permissions for the fan control hardware. This resolves a critical issue where fan control would fail for most users.
+- **Fan Mode Persistence**: Implemented a workaround for an issue where HP firmware reverts custom fan modes to "AUTO" after about two minutes. The backend service now periodically reapplies the selected fan mode to ensure it persists.
 
-Install the necessary dependencies:
+## Installation (Arch Linux)
 
-For Arch-based systems:
-
-```bash
-sudo pacman -S meson ninja gtk4 systemd
-```
-
-For Debian/Ubuntu-based systems:
-
-```bash
-sudo apt-get install meson ninja-build libgtk-4-dev systemd
-```
-
-### 2. Clone the Repository
+The installation process has been automated. Simply clone the repository and run the installer script.
 
 ```bash
 git clone https://github.com/Vilez0/victus-control
 cd victus-control
+sudo ./install.sh
 ```
 
-### 3. Build 'n' install
+The script will handle all necessary steps:
+- Installing dependencies
+- Creating the required users and groups
+- Installing the patched `hp-wmi` kernel module via DKMS
+- Building and installing the application
+- Setting up and starting the backend `systemd` service
 
-```bash
-meson setup build --prefix=/usr
-ninja -C build
-sudo ninja -C build install
-```
-
-### 4. Enable 'n' Start the Backend Service
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable victus-backend.service
-sudo systemctl start victus-backend.service
-```
-
-### 5. Launch the Application
-
-To launch the frontend application, search for "Victus Control" in your DE or run it directly from the terminal:
-
-```bash
-victus-control
-```
+After the script completes, you **must log out and log back in** for the group changes to take effect. You can then launch the application from your desktop menu or by running `victus-control`.
 
 ## Usage
 With victus-control, you can:

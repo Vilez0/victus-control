@@ -11,7 +11,7 @@ VictusAbout::VictusAbout()
 	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(about_dialog), "betelqeyza");
 	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about_dialog), "nothing :P");
 
-	GdkTexture *texture = gdk_texture_new_from_filename("/usr/share/icons/hicolor/48x48/apps/victus-icon.svg", NULL);
+	GdkTexture *texture = gdk_texture_new_from_filename("victus-icon.svg", NULL);
 
 	if (texture != NULL)
 	{

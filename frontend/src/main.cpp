@@ -19,15 +19,16 @@ public:
 	GtkWidget *menu;
 
 	std::shared_ptr<VictusSocketClient> socket_client;
-	VictusFanControl fan_control;
-	VictusKeyboardControl keyboard_control;
+	std::unique_ptr<VictusFanControl> fan_control;
+	std::unique_ptr<VictusKeyboardControl> keyboard_control;
 	VictusAbout about;
 
 	VictusControl()
-		: socket_client(std::make_shared<VictusSocketClient>("/var/run/victus-control/victus_backend.sock")),
-		  fan_control(socket_client),
-		  keyboard_control(socket_client)
 	{
+		socket_client = std::make_shared<VictusSocketClient>("/run/victus-control/victus_backend.sock");
+		fan_control = std::make_unique<VictusFanControl>(socket_client);
+		keyboard_control = std::make_unique<VictusKeyboardControl>(socket_client);
+
 		window = gtk_window_new();
 		gtk_window_set_title(GTK_WINDOW(window), "victus-control");
 		gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
@@ -47,8 +48,8 @@ public:
 
 	void add_tabs()
 	{
-		GtkWidget *keyboard_page = keyboard_control.get_page();
-		GtkWidget *fan_page = fan_control.get_page();
+		GtkWidget *keyboard_page = keyboard_control->get_page();
+		GtkWidget *fan_page = fan_control->get_page();
 
 		GtkWidget *label_keyboard = gtk_label_new("Keyboard");
 		GtkWidget *label_fan = gtk_label_new("FAN");
@@ -110,8 +111,28 @@ int main(int argc, char *argv[])
 {
 	gtk_init();
 
-	VictusControl app;
-	app.run();
+	try {
+		VictusControl app;
+		app.run();
+	} catch (const std::exception &e) {
+		std::cerr << "An unhandled exception occurred: " << e.what() << std::endl;
+		GtkWidget *error_dialog = gtk_message_dialog_new(
+			nullptr,
+			GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_MESSAGE_ERROR,
+			GTK_BUTTONS_CLOSE,
+			"An error occurred: %s",
+			e.what()
+		);
+		gtk_window_set_title(GTK_WINDOW(error_dialog), "Error");
+		g_signal_connect(error_dialog, "response", G_CALLBACK(gtk_window_destroy), nullptr);
+		gtk_widget_set_visible(error_dialog, true);
+		
+		GMainLoop *loop = g_main_loop_new(nullptr, FALSE);
+		g_main_loop_run(loop);
+		return 1;
+	}
+
 
 	return 0;
 }
