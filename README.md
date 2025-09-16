@@ -2,6 +2,11 @@
 
 **victus-control** is a software for HP Victus and Omen laptops that provides fan control and RGB keyboard settings.
 
+## Compatibility
+
+> [!WARNING]
+> This software has only been tested on an **HP Victus 16-s00xxxx** running **CachyOS (Arch Linux)**. While it may work on other HP Omen/Victus models or other Arch-based distributions, compatibility is not guaranteed.
+
 ## Features
 
 - **Fan Control**: Monitor and control the fan speeds (auto and max).
