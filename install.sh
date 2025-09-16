@@ -109,10 +109,20 @@ echo "Udev rule created."
 # --- 6. Enable Backend Service ---
 echo "--> Configuring and starting backend service..."
 # Ensure the tmpfiles.d config is applied immediately to create the socket directory
-systemd-tmpfiles --create
-systemctl daemon-reload
-udevadm control --reload-rules && udevadm trigger
-systemctl enable --now victus-backend.service
+systemd-tmpfiles --create || {
+    echo "Warning: Failed to create tmpfiles, continuing..."
+}
+systemctl daemon-reload || {
+    echo "Error: Failed to reload systemd daemon"
+    exit 1
+}
+udevadm control --reload-rules && udevadm trigger || {
+    echo "Warning: Failed to reload udev rules, continuing..."
+}
+systemctl enable --now victus-backend.service || {
+    echo "Error: Failed to enable/start victus-backend service"
+    exit 1
+}
 echo "Backend service enabled and started."
 
 echo ""

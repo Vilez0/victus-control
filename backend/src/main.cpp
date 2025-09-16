@@ -99,6 +99,10 @@ int main()
 	int server_socket, client_socket;
 	struct sockaddr_un server_addr;
 
+	// Set up signal handlers for graceful shutdown
+	signal(SIGTERM, signal_handler);
+	signal(SIGINT, signal_handler);
+
 	unlink(SOCKET_PATH);
 
 	server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -135,11 +139,15 @@ int main()
 
 	std::cout << "Server is listening..." << std::endl;
 
-	while (true)
+	while (server_running)
 	{
 		client_socket = accept(server_socket, nullptr, nullptr);
 		if (client_socket < 0)
 		{
+			if (errno == EINTR) {
+				// Interrupted by signal, check if we should continue
+				continue;
+			}
 			perror("accept");
 			continue;
 		}
@@ -173,5 +181,7 @@ int main()
 	}
 
 	close(server_socket);
+	unlink(SOCKET_PATH);
+	std::cout << "Server shutdown gracefully" << std::endl;
 	return 0;
 }

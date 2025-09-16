@@ -122,7 +122,7 @@ std::string VictusSocketClient::send_command(const std::string &command)
     }
 
     if (response_len > 4096) { // Sanity check
-        std::cerr << "Response too long, closing socket." << std::endl;
+        std::cerr << "Response too long (" << response_len << " bytes), closing socket." << std::endl;
         close_socket();
         return "ERROR: Response too long";
     }
