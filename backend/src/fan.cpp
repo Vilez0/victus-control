@@ -154,7 +154,3 @@ std::string set_fan_speed(const std::string &fan_num, const std::string &speed)
 	else
 		return "ERROR: Hwmon directory not found";
 }
-
-	else
-		return "ERROR: Hwmon directory not found";
-}

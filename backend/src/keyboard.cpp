@@ -71,5 +71,3 @@ std::string set_keyboard_brightness(const std::string &value)
     else
         return "ERROR: Keyboard Brightness File not found";
 }
-urn "ERROR: Keyboard Brightness File not found";
-}

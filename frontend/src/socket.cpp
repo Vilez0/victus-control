@@ -5,6 +5,9 @@
 #include <iostream>
 #include <cstring>
 #include <vector>
+#include <cerrno>
+#include <future>
+#include <mutex>
 
 // Helper function to reliably send a block of data
 bool send_all(int socket, const void *buffer, size_t length) {
@@ -39,6 +42,7 @@ VictusSocketClient::VictusSocketClient(const std::string &path) : socket_path(pa
 {
 	command_prefix_map = {
 		{GET_FAN_SPEED, "GET_FAN_SPEED"},
+		{SET_FAN_SPEED, "SET_FAN_SPEED"},
 		{SET_FAN_MODE, "SET_FAN_MODE"},
 		{GET_FAN_MODE, "GET_FAN_MODE"},
 		{GET_KEYBOARD_COLOR, "GET_KEYBOARD_COLOR"},
@@ -75,6 +79,7 @@ bool VictusSocketClient::connect_to_server()
 	addr.sun_family = AF_UNIX;
 	strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
 
+	// Try to connect with a timeout
 	if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
 	{
 		std::cerr << "Failed to connect to the server: " << strerror(errno) << std::endl;

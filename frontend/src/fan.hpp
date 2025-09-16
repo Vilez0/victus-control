@@ -15,22 +15,23 @@ public:
 	GtkWidget *get_page();
 
 private:
-	GtkWidget *toggle_button;
-	GtkWidget *apply_button;
+    // New UI Widgets
+    GtkWidget *mode_selector;
+    GtkWidget *speed_slider;
+    GtkWidget *slider_label;
+
+    // Labels for displaying current state
 	GtkWidget *state_label;
 	GtkWidget *fan1_speed_label;
 	GtkWidget *fan2_speed_label;
 
-	bool automatic_mode;
-	std::string current_state;
-
-	void update_fan_mode(bool automatic);
 	void update_fan_speeds();
-	void update_state_label();
-	void update_current_state();
+	void update_ui_from_system_state();
+    void set_fan_rpm(int level);
 
-	static void on_toggle_clicked(GtkWidget *widget, gpointer data);
-	static void on_apply_clicked(GtkWidget *widget, gpointer data);
+    // Signal handlers
+	static void on_mode_changed(GtkComboBox *widget, gpointer data);
+	static void on_speed_slider_changed(GtkRange *range, gpointer data);
 
 	std::shared_ptr<VictusSocketClient> socket_client;
 };

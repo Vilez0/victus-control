@@ -10,6 +10,7 @@
 enum ServerCommands
 {
 	GET_FAN_SPEED,
+    SET_FAN_SPEED,
 	SET_FAN_MODE,
 	GET_FAN_MODE,
 	GET_KEYBOARD_COLOR,

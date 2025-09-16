@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <sstream>
 
 #include "fan.hpp"
 #include "keyboard.hpp"
@@ -44,23 +45,35 @@ bool read_all(int socket, void *buffer, size_t length) {
 }
 
 
-void handle_command(const std::string &command, int client_socket)
+void handle_command(const std::string &command_str, int client_socket)
 {
+    std::stringstream ss(command_str);
+    std::string command;
+    ss >> command;
+
 	std::string response;
 
-	if (command.find("GET_FAN_SPEED") == 0)
+	if (command == "GET_FAN_SPEED")
 	{
-		response = get_fan_speed(command.substr(14));
+        std::string fan_num;
+        ss >> fan_num;
+		response = get_fan_speed(fan_num);
 	}
-	else if (command.find("SET_FAN_SPEED") == 0)
+	else if (command == "SET_FAN_SPEED")
 	{
-		std::string fan_num = command.substr(14, 1);
-		std::string speed = command.substr(16);
-		response = set_fan_speed(fan_num, speed);
+		std::string fan_num;
+        std::string speed;
+        ss >> fan_num >> speed;
+        if (!fan_num.empty() && !speed.empty()) {
+		    response = set_fan_speed(fan_num, speed);
+        } else {
+            response = "ERROR: Invalid SET_FAN_SPEED command format";
+        }
 	}
-	else if (command.find("SET_FAN_MODE") == 0)
+	else if (command == "SET_FAN_MODE")
 	{
-		std::string mode = command.substr(13); // 1 more char for the space
+		std::string mode;
+        ss >> mode;
 		response = set_fan_mode(mode);
 		fan_mode_trigger(mode);
 	}
@@ -72,18 +85,24 @@ void handle_command(const std::string &command, int client_socket)
 	{
 		response = get_keyboard_color();
 	}
-	else if (command.find("SET_KEYBOARD_COLOR") == 0)
+	else if (command == "SET_KEYBOARD_COLOR")
 	{
-		std::string color = command.substr(19);
-		response = set_keyboard_color(color);
+		std::string r, g, b;
+        ss >> r >> g >> b;
+        if (!r.empty() && !g.empty() && !b.empty()) {
+		    response = set_keyboard_color(r + " " + g + " " + b);
+        } else {
+            response = "ERROR: Invalid SET_KEYBOARD_COLOR command format";
+        }
 	}
 	else if (command == "GET_KBD_BRIGHTNESS")
 	{
 		response = get_keyboard_brightness();
 	}
-	else if (command.find("SET_KBD_BRIGHTNESS") == 0)
+	else if (command == "SET_KBD_BRIGHTNESS")
 	{
-		std::string value = command.substr(19);
+		std::string value;
+        ss >> value;
 		response = set_keyboard_brightness(value);
 	}
 	else
@@ -98,10 +117,6 @@ int main()
 {
 	int server_socket, client_socket;
 	struct sockaddr_un server_addr;
-
-	// Set up signal handlers for graceful shutdown
-	signal(SIGTERM, signal_handler);
-	signal(SIGINT, signal_handler);
 
 	unlink(SOCKET_PATH);
 
@@ -139,15 +154,11 @@ int main()
 
 	std::cout << "Server is listening..." << std::endl;
 
-	while (server_running)
+	while (true)
 	{
 		client_socket = accept(server_socket, nullptr, nullptr);
 		if (client_socket < 0)
 		{
-			if (errno == EINTR) {
-				// Interrupted by signal, check if we should continue
-				continue;
-			}
 			perror("accept");
 			continue;
 		}
@@ -181,7 +192,5 @@ int main()
 	}
 
 	close(server_socket);
-	unlink(SOCKET_PATH);
-	std::cout << "Server shutdown gracefully" << std::endl;
 	return 0;
 }
