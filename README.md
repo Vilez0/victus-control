@@ -1,11 +1,6 @@
 # victus-control
 
-> [!NOTE]
-> This is an initial UI based on https://github.com/betelqeyza/victus-control, expect missing features and major frontend UI changes (it's planned, not the main focus tho)
-
-**victus-control** is a software for HP Victus and Omen laptops with fan control and RGB keyboard settings.
-
-**IMPORTANT:** You need to use [my hp-wmi fork](https://github.com/Vilez0/hp-wmi-fan-and-backlight-control) to make this work.
+**victus-control** is a software for HP Victus and Omen laptops that provides fan control and RGB keyboard settings.
 
 ## Features
 
