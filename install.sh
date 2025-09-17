@@ -125,11 +125,29 @@ systemctl daemon-reload || {
 udevadm control --reload-rules && udevadm trigger || {
     echo "Warning: Failed to reload udev rules, continuing..."
 }
-systemctl enable --now victus-backend.service || {
-    echo "Error: Failed to enable/start victus-backend service"
-    exit 1
-}
-echo "Backend service enabled and started."
+
+if systemctl list-unit-files | grep -q '^victus-backend.service'; then
+    echo "--> Refreshing victus-backend.service state..."
+    if systemctl is-enabled victus-backend.service >/dev/null 2>&1; then
+        systemctl restart victus-backend.service || {
+            echo "Error: Failed to restart victus-backend service"
+            exit 1
+        }
+        echo "Backend service restarted."
+    else
+        systemctl enable --now victus-backend.service || {
+            echo "Error: Failed to enable/start victus-backend service"
+            exit 1
+        }
+        echo "Backend service enabled and started."
+    fi
+else
+    systemctl enable --now victus-backend.service || {
+        echo "Error: Failed to enable/start victus-backend service"
+        exit 1
+    }
+    echo "Backend service enabled and started."
+fi
 
 echo ""
 echo "--- Installation Complete! ---"

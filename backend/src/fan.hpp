@@ -5,4 +5,4 @@ std::string set_fan_mode(const std::string &value);
 std::string get_fan_mode();
 
 std::string get_fan_speed(const std::string &fan_num);
-std::string set_fan_speed(const std::string &fan_num, const std::string &speed, bool trigger_mode = true);
+std::string set_fan_speed(const std::string &fan_num, const std::string &speed, bool trigger_mode = true, bool update_cache = true);

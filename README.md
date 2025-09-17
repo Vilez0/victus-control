@@ -7,7 +7,7 @@
 
 ## Architecture at a Glance
 - **Patched hp-wmi driver** (`dkms`): sourced from [Vilez0/hp-wmi-fan-and-backlight-control](https://github.com/Vilez0/hp-wmi-fan-and-backlight-control). Enables writable `fan*_target` nodes and single-zone RGB that HP disables upstream.
-- **Backend service** (`victus-backend`): C++17 daemon running as the `victus-backend` user. Talks to the driver through sysfs, exposes a UNIX socket at `/run/victus-control/victus_backend.sock`, and reapplies manual speeds every 90 seconds to survive firmware resets.
+- **Backend service** (`victus-backend`): C++17 daemon running as the `victus-backend` user. Talks to the driver through sysfs, exposes a UNIX socket at `/run/victus-control/victus_backend.sock`, and reapplies manual speeds every 90 seconds to survive firmware resets. Provides a “Better Auto” control loop that watches CPU/GPU temps + utilisation (sampling every ~2 s) and continuously retunes RPMs in the background while clamping to each fan’s hardware maximum.
 - **Frontend** (`victus-control`): GTK4 UI for selecting AUTO/MANUAL/MAX, setting manual RPM steps, and adjusting keyboard color/brightness. Communicates with the backend over the socket.
 
 ## Requirements
@@ -32,7 +32,7 @@ Log out and back in after installation so your user picks up the new `victus` gr
 
 ## Using victus-control
 - Launch the GUI from your application menu or run `victus-control` in a terminal.
-- Switch modes with the dropdown: `AUTO`, `MANUAL`, or `MAX`. In MANUAL, the slider maps eight steps between ~2000 RPM and ~5700 RPM.
+- Switch modes with the dropdown: `AUTO`, `Better Auto`, `MANUAL`, or `MAX`. In MANUAL, the slider maps eight steps between ~2000 RPM and ~5700 RPM. “Better Auto” keeps the hardware in manual mode while a background loop samples CPU/GPU temps and utilisation and reasserts fan targets every 90 s (with the required 10 s offset between fans), fixing the stock firmware behaviour where AUTO leaves both fans idling near 2000 RPM regardless of temperature.
 - Keyboard tab lets you pick RGB colors (single-zone) and brightness. Fn+P performance hotkey remains functional.
 - Check service status with `systemctl status victus-backend.service`; logs are available via `journalctl -u victus-backend`.
 

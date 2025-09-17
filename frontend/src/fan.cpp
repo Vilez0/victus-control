@@ -4,10 +4,13 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <cmath>
+#include <algorithm>
 
 // Constants for manual fan control
 const int MIN_RPM = 2000;
-const int MAX_RPM = 5700;
+const int FAN1_MAX_RPM = 5800;
+const int FAN2_MAX_RPM = 6100;
 const int RPM_STEPS = 8;
 
 VictusFanControl::VictusFanControl(std::shared_ptr<VictusSocketClient> client) : socket_client(client)
@@ -21,6 +24,7 @@ VictusFanControl::VictusFanControl(std::shared_ptr<VictusSocketClient> client) :
     // --- Mode Selector ---
     mode_selector = gtk_combo_box_text_new();
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(mode_selector), "AUTO", "AUTO");
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(mode_selector), "BETTER_AUTO", "Better Auto");
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(mode_selector), "MANUAL", "MANUAL");
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(mode_selector), "MAX", "MAX");
     g_signal_connect(mode_selector, "changed", G_CALLBACK(on_mode_changed), this);
@@ -81,6 +85,10 @@ void VictusFanControl::update_ui_from_system_state()
         gtk_combo_box_set_active_id(GTK_COMBO_BOX(mode_selector), "MANUAL");
         gtk_widget_set_sensitive(speed_slider, TRUE);
         gtk_widget_set_sensitive(slider_label, TRUE);
+    } else if (fan_mode == "BETTER_AUTO") {
+        gtk_combo_box_set_active_id(GTK_COMBO_BOX(mode_selector), "BETTER_AUTO");
+        gtk_widget_set_sensitive(speed_slider, FALSE);
+        gtk_widget_set_sensitive(slider_label, FALSE);
     } else if (fan_mode == "MAX") {
         gtk_combo_box_set_active_id(GTK_COMBO_BOX(mode_selector), "MAX");
         gtk_widget_set_sensitive(speed_slider, FALSE);
@@ -110,22 +118,33 @@ void VictusFanControl::set_fan_rpm(int level)
 {
     if (level < 1 || level > RPM_STEPS) return;
 
-    int rpm_range = MAX_RPM - MIN_RPM;
-    int rpm_step = rpm_range / (RPM_STEPS - 1);
-    int target_rpm = MIN_RPM + (level - 1) * rpm_step;
+    auto compute_rpm = [](int lvl, int max_rpm) {
+        if (RPM_STEPS <= 1) {
+            return max_rpm;
+        }
+        double step = static_cast<double>(max_rpm - MIN_RPM) / static_cast<double>(RPM_STEPS - 1);
+        double value = static_cast<double>(MIN_RPM) + static_cast<double>(lvl - 1) * step;
+        int rpm = static_cast<int>(std::round(value));
+        rpm = std::clamp(rpm, MIN_RPM, max_rpm);
+        return rpm;
+    };
 
-    std::string rpm_str = std::to_string(target_rpm);
+    int fan1_rpm = compute_rpm(level, FAN1_MAX_RPM);
+    int fan2_rpm = compute_rpm(level, FAN2_MAX_RPM);
+
+    std::string fan1_rpm_str = std::to_string(fan1_rpm);
+    std::string fan2_rpm_str = std::to_string(fan2_rpm);
 
     // Launch a detached thread to send commands without freezing the UI
-    std::thread([this, rpm_str]() {
+    std::thread([this, fan1_rpm_str, fan2_rpm_str]() {
         // Send command for Fan 1 and wait for it to complete
-        socket_client->send_command_async(SET_FAN_SPEED, "1 " + rpm_str).get();
+        socket_client->send_command_async(SET_FAN_SPEED, "1 " + fan1_rpm_str).get();
         
         // Wait for 10 seconds
         std::this_thread::sleep_for(std::chrono::seconds(10));
         
         // Send command for Fan 2 and wait for it to complete
-        socket_client->send_command_async(SET_FAN_SPEED, "2 " + rpm_str).get();
+        socket_client->send_command_async(SET_FAN_SPEED, "2 " + fan2_rpm_str).get();
     }).detach();
 }
 
@@ -145,6 +164,9 @@ void VictusFanControl::on_mode_changed(GtkComboBox *widget, gpointer data)
             if (mode_str == "MANUAL") {
                 int level = static_cast<int>(gtk_range_get_value(GTK_RANGE(self->speed_slider)));
                 self->set_fan_rpm(level);
+            } else if (mode_str == "BETTER_AUTO") {
+                gtk_widget_set_sensitive(self->speed_slider, FALSE);
+                gtk_widget_set_sensitive(self->slider_label, FALSE);
             }
         } else {
             std::cerr << "Failed to set fan mode: " << result << std::endl;

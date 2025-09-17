@@ -7,6 +7,8 @@
 #include <vector>
 #include <cstdint>
 #include <sstream>
+#include <algorithm>
+#include <cctype>
 
 #include "fan.hpp"
 #include "keyboard.hpp"
@@ -45,6 +47,28 @@ bool read_all(int socket, void *buffer, size_t length) {
 }
 
 
+static std::string trim(const std::string &input)
+{
+    size_t start = input.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) {
+        return "";
+    }
+    size_t end = input.find_last_not_of(" \t\r\n");
+    return input.substr(start, end - start + 1);
+}
+
+static std::string normalize_mode(std::string mode)
+{
+    for (char &ch : mode) {
+        if (ch == '-' || ch == ' ') {
+            ch = '_';
+        } else {
+            ch = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
+        }
+    }
+    return mode;
+}
+
 void handle_command(const std::string &command_str, int client_socket)
 {
     std::stringstream ss(command_str);
@@ -65,17 +89,25 @@ void handle_command(const std::string &command_str, int client_socket)
         std::string speed;
         ss >> fan_num >> speed;
         if (!fan_num.empty() && !speed.empty()) {
-		    response = set_fan_speed(fan_num, speed, true); // true = allow triggering fan_mode_trigger
+		    response = set_fan_speed(fan_num, speed, true, true); // true = allow triggering fan_mode_trigger
         } else {
             response = "ERROR: Invalid SET_FAN_SPEED command format";
         }
 	}
 	else if (command == "SET_FAN_MODE")
 	{
-		std::string mode;
-        ss >> mode;
-		response = set_fan_mode(mode);
-		fan_mode_trigger(mode);
+		std::string remainder;
+        std::getline(ss, remainder);
+        remainder = trim(remainder);
+        if (remainder.empty()) {
+            response = "ERROR: Invalid SET_FAN_MODE command format";
+        } else {
+            std::string mode = normalize_mode(remainder);
+		    response = set_fan_mode(mode);
+            if (response == "OK") {
+		        fan_mode_trigger(mode);
+            }
+        }
 	}
 	else if (command == "GET_FAN_MODE")
 	{
