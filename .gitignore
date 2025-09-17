@@ -4,3 +4,5 @@ pkg/
 
 .gemini/
 gha-creds-*.json
+AGENTS.md
+test_backend.py
