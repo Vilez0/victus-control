@@ -6,3 +6,4 @@ pkg/
 gha-creds-*.json
 AGENTS.md
 test_backend.py
+hp-wmi-fan-and-backlight-control/
