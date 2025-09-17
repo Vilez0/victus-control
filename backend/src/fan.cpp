@@ -6,48 +6,90 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <mutex>
+#include <optional>
 
 #include "fan.hpp"
 #include "util.hpp"
 
 static std::atomic<int> fan_thread_generation(0);
-static std::atomic<int> fan_speed_thread_generation(0);
-static std::string last_fan_speed;
+static std::atomic<bool> is_reapplying(false);
+static std::mutex fan_state_mutex;
+static std::optional<std::string> last_fan1_speed;
+static std::optional<std::string> last_fan2_speed;
 
-// call set_fan_speed every 90 seconds to prevent reversion
-void fan_speed_trigger(const std::string& speed) {
-    last_fan_speed = speed;
-    fan_speed_thread_generation++;
-	if (speed.empty()) return; // Stop the loop if speed is cleared
+// Function to reapply fan settings without triggering fan_mode_trigger
+void reapply_fan_settings() {
+    bool expected = false;
+    if (!is_reapplying.compare_exchange_strong(expected, true, std::memory_order_acquire)) {
+        return; // Another reapply loop is already running
+    }
 
-    std::thread([speed, gen = fan_speed_thread_generation.load()]() {
-        while (fan_speed_thread_generation == gen) {
-            // Wait for the interval
-            for (int i = 0; i < 90; ++i) {
-                if (fan_speed_thread_generation != gen) return;
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
+    std::optional<std::string> fan1_speed;
+    std::optional<std::string> fan2_speed;
+    {
+        std::lock_guard<std::mutex> lock(fan_state_mutex);
+        fan1_speed = last_fan1_speed;
+        fan2_speed = last_fan2_speed;
+    }
 
-            // Re-apply the speed if we are still the active thread
-            if (fan_speed_thread_generation == gen) {
-                std::cout << "Re-applying manual fan speed: " << speed << std::endl;
-                set_fan_speed("1", speed);
-                std::this_thread::sleep_for(std::chrono::seconds(10));
-                set_fan_speed("2", speed);
+    std::string current_mode = get_fan_mode();
+    if (current_mode == "MANUAL" && (fan1_speed || fan2_speed)) {
+        std::ostringstream log_message;
+        log_message << "Re-applying manual fan settings";
+        bool has_detail = false;
+
+        if (fan1_speed) {
+            log_message << (has_detail ? ", " : ": ") << "fan1=" << *fan1_speed;
+            has_detail = true;
+        }
+        if (fan2_speed) {
+            log_message << (has_detail ? ", " : ": ") << "fan2=" << *fan2_speed;
+        }
+
+        std::cout << log_message.str() << std::endl;
+
+        if (fan1_speed) {
+            std::string command = "sudo /usr/bin/set-fan-speed.sh 1 " + *fan1_speed;
+            int result = system(command.c_str());
+            if (result != 0) {
+                std::cerr << "Failed to reapply fan 1 speed" << std::endl;
             }
         }
-    }).detach();
+
+        if (fan2_speed) {
+            if (fan1_speed) {
+                std::this_thread::sleep_for(std::chrono::seconds(10));
+            }
+            std::string command = "sudo /usr/bin/set-fan-speed.sh 2 " + *fan2_speed;
+            int result = system(command.c_str());
+            if (result != 0) {
+                std::cerr << "Failed to reapply fan 2 speed" << std::endl;
+            }
+        }
+    }
+
+    is_reapplying.store(false, std::memory_order_release);
 }
 
-// call set_fan_mode every 100 seconds so that the mode doesn't revert back (weird hp behaviour)
+// call set_fan_mode every 90 seconds so that the mode doesn't revert back (weird hp behaviour)
+// also re-applies manual fan speed
 void fan_mode_trigger(const std::string mode) {
     fan_thread_generation++;
 	if (mode == "AUTO") return;
 
     std::thread([mode, gen = fan_thread_generation.load()]() {
         while (fan_thread_generation == gen) {
+            // Reapply the fan mode
             set_fan_mode(mode);
-            for (int i = 0; i < 100; ++i) {
+
+            // Reapply fan settings if in manual mode
+            if (mode == "MANUAL") {
+                reapply_fan_settings();
+            }
+
+            // Wait for the interval (90 seconds)
+            for (int i = 0; i < 90; ++i) {
                 if (fan_thread_generation != gen) return;
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
@@ -96,11 +138,6 @@ std::string get_fan_mode()
 
 std::string set_fan_mode(const std::string &mode)
 {
-    // Stop the fan speed persistence loop if mode is not MANUAL
-    if (mode != "MANUAL") {
-        fan_speed_thread_generation++;
-    }
-
 	std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
 
 	if (!hwmon_path.empty())
@@ -163,8 +200,17 @@ std::string get_fan_speed(const std::string &fan_num)
 	}
 }
 
-std::string set_fan_speed(const std::string &fan_num, const std::string &speed)
+std::string set_fan_speed(const std::string &fan_num, const std::string &speed, bool trigger_mode)
 {
+    {
+        std::lock_guard<std::mutex> lock(fan_state_mutex);
+        if (fan_num == "1") {
+            last_fan1_speed = speed;
+        } else if (fan_num == "2") {
+            last_fan2_speed = speed;
+        }
+    }
+
     // Construct the command to call the external script with sudo
     // The script must be in a location like /usr/bin
     std::string command = "sudo /usr/bin/set-fan-speed.sh " + fan_num + " " + speed;
@@ -173,6 +219,10 @@ std::string set_fan_speed(const std::string &fan_num, const std::string &speed)
 
     if (result == 0)
     {
+        // Only trigger fan_mode_trigger if requested and not already reapplying
+        if (trigger_mode && !is_reapplying.load(std::memory_order_acquire) && get_fan_mode() == "MANUAL") {
+            fan_mode_trigger("MANUAL");
+        }
         return "OK";
     }
     else
@@ -181,4 +231,3 @@ std::string set_fan_speed(const std::string &fan_num, const std::string &speed)
         return "ERROR: Failed to set fan speed";
     }
 }
-
