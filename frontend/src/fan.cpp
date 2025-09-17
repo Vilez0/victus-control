@@ -115,8 +115,18 @@ void VictusFanControl::set_fan_rpm(int level)
     int target_rpm = MIN_RPM + (level - 1) * rpm_step;
 
     std::string rpm_str = std::to_string(target_rpm);
-    socket_client->send_command_async(SET_FAN_SPEED, "1 " + rpm_str);
-    socket_client->send_command_async(SET_FAN_SPEED, "2 " + rpm_str);
+
+    // Launch a detached thread to send commands without freezing the UI
+    std::thread([this, rpm_str]() {
+        // Send command for Fan 1 and wait for it to complete
+        socket_client->send_command_async(SET_FAN_SPEED, "1 " + rpm_str).get();
+        
+        // Wait for 10 seconds
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+        
+        // Send command for Fan 2 and wait for it to complete
+        socket_client->send_command_async(SET_FAN_SPEED, "2 " + rpm_str).get();
+    }).detach();
 }
 
 void VictusFanControl::on_mode_changed(GtkComboBox *widget, gpointer data)

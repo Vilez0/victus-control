@@ -66,6 +66,9 @@ void handle_command(const std::string &command_str, int client_socket)
         ss >> fan_num >> speed;
         if (!fan_num.empty() && !speed.empty()) {
 		    response = set_fan_speed(fan_num, speed);
+            if (response == "OK") {
+                fan_speed_trigger(speed);
+            }
         } else {
             response = "ERROR: Invalid SET_FAN_SPEED command format";
         }

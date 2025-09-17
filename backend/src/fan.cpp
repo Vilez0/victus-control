@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -10,6 +11,33 @@
 #include "util.hpp"
 
 static std::atomic<int> fan_thread_generation(0);
+static std::atomic<int> fan_speed_thread_generation(0);
+static std::string last_fan_speed;
+
+// call set_fan_speed every 90 seconds to prevent reversion
+void fan_speed_trigger(const std::string& speed) {
+    last_fan_speed = speed;
+    fan_speed_thread_generation++;
+	if (speed.empty()) return; // Stop the loop if speed is cleared
+
+    std::thread([speed, gen = fan_speed_thread_generation.load()]() {
+        while (fan_speed_thread_generation == gen) {
+            // Wait for the interval
+            for (int i = 0; i < 90; ++i) {
+                if (fan_speed_thread_generation != gen) return;
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+
+            // Re-apply the speed if we are still the active thread
+            if (fan_speed_thread_generation == gen) {
+                std::cout << "Re-applying manual fan speed: " << speed << std::endl;
+                set_fan_speed("1", speed);
+                std::this_thread::sleep_for(std::chrono::seconds(10));
+                set_fan_speed("2", speed);
+            }
+        }
+    }).detach();
+}
 
 // call set_fan_mode every 100 seconds so that the mode doesn't revert back (weird hp behaviour)
 void fan_mode_trigger(const std::string mode) {
@@ -68,6 +96,11 @@ std::string get_fan_mode()
 
 std::string set_fan_mode(const std::string &mode)
 {
+    // Stop the fan speed persistence loop if mode is not MANUAL
+    if (mode != "MANUAL") {
+        fan_speed_thread_generation++;
+    }
+
 	std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
 
 	if (!hwmon_path.empty())
@@ -132,25 +165,20 @@ std::string get_fan_speed(const std::string &fan_num)
 
 std::string set_fan_speed(const std::string &fan_num, const std::string &speed)
 {
-	std::cout << "Setting fan " << fan_num << " speed to " << speed << std::endl;
-	std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
+    // Construct the command to call the external script with sudo
+    // The script must be in a location like /usr/bin
+    std::string command = "sudo /usr/bin/set-fan-speed.sh " + fan_num + " " + speed;
 
-	if (!hwmon_path.empty())
-	{
-		std::ofstream fan_file(hwmon_path + "/fan" + fan_num + "_target");
+    int result = system(command.c_str());
 
-		if (fan_file)
-		{
-			fan_file << speed;
-			fan_file.flush();
-			if (fan_file.fail()) {
-				return "ERROR: Failed to write fan speed";
-			}
-			return "OK";
-		}
-		else
-			return "ERROR: Unable to set fan speed";
-	}
-	else
-		return "ERROR: Hwmon directory not found";
+    if (result == 0)
+    {
+        return "OK";
+    }
+    else
+    {
+        std::cerr << "Failed to execute set-fan-speed.sh for fan " << fan_num << ". Exit code: " << WEXITSTATUS(result) << std::endl;
+        return "ERROR: Failed to set fan speed";
+    }
 }
+
