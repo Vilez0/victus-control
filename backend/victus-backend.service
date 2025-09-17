@@ -3,6 +3,7 @@ Description=Victus Control Backend Service
 After=network.target
 
 [Service]
+ExecStartPre=/bin/sleep 5
 ExecStart=/usr/bin/victus-backend
 Restart=always
 User=victus-backend

@@ -1,0 +1,4 @@
+# Allow the victus-backend user to control fan speeds via tee.
+# This is necessary because the hp-wmi kernel driver requires root privileges
+# to write to the fan control sysfs files.
+victus-backend ALL=(root) NOPASSWD: /usr/bin/tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/fan*_target
