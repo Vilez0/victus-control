@@ -49,7 +49,7 @@ struct CpuSampleTimes {
 static std::mutex cpu_usage_mutex;
 static std::optional<CpuSampleTimes> previous_cpu_times;
 
-static constexpr int kBetterAutoMinRpm = 2000;
+static constexpr int kBetterAutoMinRpm = 2600;
 static constexpr std::array<int, 2> kBetterAutoMaxFallback = {5800, 6100};
 static constexpr int kBetterAutoSteps = 8;
 static constexpr std::chrono::seconds kBetterAutoTick{2};
@@ -435,7 +435,7 @@ static std::array<int, 2> rpm_for_level(int level)
 
 static int level_from_snapshot(const ThermalSnapshot &snapshot, int previous_level)
 {
-    const std::array<double, 7> temp_thresholds = {50.0, 60.0, 70.0, 75.0, 80.0, 85.0, 90.0};
+    const std::array<double, 7> temp_thresholds = {45.0, 55.0, 65.0, 70.0, 75.0, 80.0, 84.0};
     const std::array<double, 7> usage_thresholds = {20.0, 35.0, 50.0, 65.0, 75.0, 85.0, 95.0};
 
     double hottest = 0.0;
