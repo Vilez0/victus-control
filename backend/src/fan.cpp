@@ -436,7 +436,7 @@ static std::array<int, 2> rpm_for_level(int level)
 static int level_from_snapshot(const ThermalSnapshot &snapshot, int previous_level)
 {
     const std::array<double, 7> temp_thresholds = {45.0, 55.0, 65.0, 70.0, 75.0, 80.0, 84.0};
-    const std::array<double, 7> usage_thresholds = {15.0, 30.0, 45.0, 55.0, 60.0, 62.0, 65.0};
+    const std::array<double, 7> usage_thresholds = {15.0, 20.0, 25.0, 35.0, 45.0, 55.0, 65.0};
 
     double hottest = 0.0;
     bool have_temp = false;
