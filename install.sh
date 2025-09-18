@@ -14,7 +14,45 @@ echo "--- Starting Victus Control Installation ---"
 
 # --- 1. Install Dependencies ---
 echo "--> Installing required packages..."
-pacman -S --needed --noconfirm meson ninja gtk4 git dkms linux-headers
+
+packages=(meson ninja gtk4 git dkms)
+declare -A header_packages=()
+
+for module_dir in /usr/lib/modules/*; do
+    [[ -d "${module_dir}" ]] || continue
+
+    pkgbase_path="${module_dir}/pkgbase"
+    kernel_release=$(basename "${module_dir}")
+
+    if [[ -r "${pkgbase_path}" ]]; then
+        kernel_pkg=$(<"${pkgbase_path}")
+        kernel_pkg=${kernel_pkg//[[:space:]]/}
+        header_pkg="${kernel_pkg}-headers"
+
+        if pacman -Si "${header_pkg}" > /dev/null 2>&1; then
+            header_packages["${header_pkg}"]=1
+            echo "Detected kernel '${kernel_pkg}' (${kernel_release}); queued '${header_pkg}'."
+            continue
+        fi
+
+        echo "Warning: Unable to find package '${header_pkg}' for kernel '${kernel_pkg}' (${kernel_release})."
+    else
+        echo "Warning: Unable to read kernel package info at '${pkgbase_path}'."
+    fi
+
+    header_packages[linux-headers]=1
+done
+
+if [[ ${#header_packages[@]} -eq 0 ]]; then
+    echo "Warning: No kernel headers detected; defaulting to 'linux-headers'."
+    header_packages[linux-headers]=1
+fi
+
+for header_pkg in "${!header_packages[@]}"; do
+    packages+=("${header_pkg}")
+done
+
+pacman -S --needed --noconfirm "${packages[@]}"
 
 # --- 2. Create Users and Groups ---
 echo "--> Creating secure users and groups..."
@@ -76,25 +114,58 @@ echo "Helper script and sudoers file installed."
 
 # --- 3. Install Patched HP-WMI Kernel Module ---
 echo "--> Installing patched hp-wmi kernel module..."
-if [ -d "hp-wmi-fan-and-backlight-control" ]; then
-    echo "Kernel module source directory already exists. Skipping clone."
+wmi_root="wmi-project"
+wmi_repo="${wmi_root}/hp-wmi-fan-and-backlight-control"
+
+mkdir -p "${wmi_root}"
+
+if [ -d "${wmi_repo}/.git" ]; then
+    echo "Kernel module source directory already exists. Updating repository..."
+    if ! git -C "${wmi_repo}" fetch origin master; then
+        echo "Warning: Failed to fetch latest hp-wmi-fan-and-backlight-control changes."
+    else
+        git -C "${wmi_repo}" reset --hard origin/master || {
+            echo "Warning: Failed to reset hp-wmi-fan-and-backlight-control repository to origin/master."
+            echo "         Remove the directory manually if the local clone is corrupted."
+        }
+    fi
 else
-    git clone https://github.com/Vilez0/hp-wmi-fan-and-backlight-control.git
+    git clone https://github.com/Batuhan4/hp-wmi-fan-and-backlight-control.git "${wmi_repo}"
 fi
-cd hp-wmi-fan-and-backlight-control
+pushd "${wmi_repo}" >/dev/null
 
 # Check if the module is already installed with DKMS
-if dkms status | grep -q 'hp-wmi-fan-and-backlight-control/0.0.2,.*, installed'; then
-    echo "hp-wmi module is already installed via DKMS."
-else
-    # If the module is registered but not installed (e.g., from a failed run), remove it first.
-    if dkms status | grep -q 'hp-wmi-fan-and-backlight-control/0.0.2'; then
-        echo "Removing existing (but not installed) DKMS module registration."
-        dkms remove hp-wmi-fan-and-backlight-control/0.0.2 --all
+module_name="hp-wmi-fan-and-backlight-control"
+module_version="0.0.2"
+
+if dkms status -m "${module_name}" -v "${module_version}" >/dev/null 2>&1; then
+    echo "Removing existing DKMS registration for ${module_name}/${module_version}..."
+    dkms remove "${module_name}/${module_version}" --all || true
+fi
+
+echo "Registering DKMS module ${module_name}/${module_version}..."
+dkms add .
+
+declare -a kernels_needing_install=()
+
+for module_dir in /usr/lib/modules/*; do
+    [[ -d "${module_dir}" ]] || continue
+    kernel_release=$(basename "${module_dir}")
+
+    kernel_status=$(dkms status -m "${module_name}" -v "${module_version}" -k "${kernel_release}" || true)
+
+    if [[ "${kernel_status}" != *"installed"* ]]; then
+        kernels_needing_install+=("${kernel_release}")
     fi
-    echo "Registering and installing the DKMS module..."
-    dkms add .
-    dkms install hp-wmi-fan-and-backlight-control/0.0.2
+done
+
+if [[ ${#kernels_needing_install[@]} -eq 0 ]]; then
+    echo "hp-wmi module is already installed via DKMS for all detected kernels."
+else
+    echo "Installing hp-wmi module for kernels: ${kernels_needing_install[*]}"
+    for kernel_release in "${kernels_needing_install[@]}"; do
+        dkms install "${module_name}/${module_version}" -k "${kernel_release}"
+    done
 fi
 
 # Ensure the new module is loaded
@@ -102,7 +173,7 @@ if lsmod | grep -q "hp_wmi"; then
   rmmod hp_wmi
 fi
 modprobe hp_wmi
-cd ..
+popd >/dev/null
 echo "Kernel module installed and loaded."
 
 # --- 4. Build and Install victus-control ---
