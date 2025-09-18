@@ -54,6 +54,8 @@ static constexpr std::array<int, 2> kBetterAutoMaxFallback = {5800, 6100};
 static constexpr int kBetterAutoSteps = 8;
 static constexpr std::chrono::seconds kBetterAutoTick{2};
 static constexpr std::chrono::seconds kBetterAutoReapply{90};
+static constexpr int kBetterAutoCooldownLevel = 5;
+static constexpr std::chrono::seconds kBetterAutoCooldown{90};
 static constexpr std::chrono::seconds kFanApplyGap{10};
 
 static std::array<std::once_flag, 2> fan_max_once;
@@ -515,13 +517,26 @@ static void better_auto_worker()
 {
     std::cout << "better-auto: control loop started" << std::endl;
     int current_level = 3;
+    int sensor_level = 3;
     auto last_apply = std::chrono::steady_clock::time_point::min();
     better_auto_last_manual_assert = std::chrono::steady_clock::time_point::min();
+    auto cooldown_until = std::chrono::steady_clock::time_point::min();
+    int cooldown_level = 0;
 
     while (better_auto_running.load(std::memory_order_acquire)) {
         ThermalSnapshot snapshot = collect_snapshot();
-        int target_level = level_from_snapshot(snapshot, current_level);
+        sensor_level = level_from_snapshot(snapshot, sensor_level);
+        int target_level = sensor_level;
         auto now = std::chrono::steady_clock::now();
+
+        if (cooldown_level > 0 && now >= cooldown_until) {
+            cooldown_level = 0;
+            cooldown_until = std::chrono::steady_clock::time_point::min();
+        }
+
+        if (cooldown_level > 0 && target_level < cooldown_level) {
+            target_level = cooldown_level;
+        }
 
         bool need_mode_refresh = (better_auto_last_manual_assert == std::chrono::steady_clock::time_point::min()) ||
                                  (now - better_auto_last_manual_assert >= std::chrono::seconds(80));
@@ -531,6 +546,10 @@ static void better_auto_worker()
                 std::cerr << "better-auto: failed to keep manual mode active: " << refresh_result << std::endl;
             }
             better_auto_last_manual_assert = now;
+        }
+
+        if (target_level < current_level) {
+            target_level = std::max(target_level, current_level - 1);
         }
 
         bool need_apply = (target_level != current_level) ||
@@ -565,7 +584,12 @@ static void better_auto_worker()
             }
 
             current_level = target_level;
-            last_apply = std::chrono::steady_clock::now();
+            last_apply = now;
+        }
+
+        if (sensor_level >= kBetterAutoCooldownLevel) {
+            cooldown_level = std::max(cooldown_level, current_level);
+            cooldown_until = now + kBetterAutoCooldown;
         }
 
         const int tick_seconds = static_cast<int>(kBetterAutoTick.count());
