@@ -24,13 +24,13 @@ sudo ./install.sh
 The installer handles dependency install, user/group creation, DKMS module registration, build + install, and restarts `victus-backend.service`. Log out/in afterwards so your user joins the `victus` group.
 
 ### Background services
-- `victus-healthcheck.service` runs at boot to ensure the patched `hp-wmi` DKMS module is built for the current kernel and that `hp_wmi` is loaded before the backend starts.
-- `victus-backend.service` stays active 24/7, automatically reenforcing `Better Auto` when the UI/CLI disconnects and restarting on failure to keep fan control live.
+- `victus-healthcheck.service` runs during boot to ensure the patched `hp-wmi` DKMS module is built for the current kernel and that `hp_wmi` is loaded before the backend starts.
+- `victus-backend.service` launches automatically at boot, stays active 24/7, and keeps Better Auto applied even when no UI client is connected—so fan tweaks persist without needing to open the app.
 
 ## Daily Usage
 - Launch the GTK app (`victus-control`) or use the CLI client (`test_backend.py`).
 - Mode dropdown offers `AUTO`, `Better Auto`, `MANUAL`, `MAX`:
-  - *Better Auto* keeps fans in manual PWM and dynamically adjusts RPMs based on temps/utilisation—ideal for gaming or heavy workloads.
+  - *Better Auto* is enforced by the background service on each boot, keeps fans in manual PWM, and dynamically adjusts RPMs based on temps/utilisation—ideal for gaming or heavy workloads.
   - *Manual* maps slider positions to calibrated RPM steps; fan 2 honours the 10 s offset automatically.
 - Keyboard tab exposes RGB colour + brightness controls.
 - Backend status: `systemctl status victus-backend.service` (logs via `journalctl -u victus-backend`).
