@@ -1,11 +1,12 @@
 [Unit]
 Description=Victus Control Backend Service
-After=network.target
+After=systemd-modules-load.service victus-healthcheck.service network.target
+Wants=victus-healthcheck.service
 
 [Service]
-ExecStartPre=/bin/sleep 5
 ExecStart=/usr/bin/victus-backend
 Restart=always
+RestartSec=5
 User=victus-backend
 Group=victus
 

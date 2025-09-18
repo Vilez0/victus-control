@@ -1,3 +1,4 @@
+#include <atomic>
 #include <iostream>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -15,6 +16,32 @@
 
 #define SOCKET_DIR "/run/victus-control"
 #define SOCKET_PATH SOCKET_DIR "/victus_backend.sock"
+
+static std::atomic<int> active_clients{0};
+
+static void on_client_connected()
+{
+    int current = active_clients.fetch_add(1) + 1;
+    std::cout << "Client connected (active: " << current << ")" << std::endl;
+}
+
+static void on_client_disconnected()
+{
+    int previous = active_clients.fetch_sub(1);
+    int current = previous - 1;
+    if (previous <= 0) {
+        active_clients.store(0);
+        current = 0;
+    }
+    std::cout << "Client disconnected (active: " << current << ")" << std::endl;
+
+    if (current == 0) {
+        auto result = ensure_better_auto_mode();
+        if (result != "OK") {
+            std::cerr << "Failed to enforce BETTER_AUTO mode after client disconnect: " << result << std::endl;
+        }
+    }
+}
 
 // Helper function to reliably send a block of data
 bool send_all(int socket, const void *buffer, size_t length) {
@@ -186,6 +213,12 @@ int main()
 
 	std::cout << "Server is listening..." << std::endl;
 
+	auto ensure_result = ensure_better_auto_mode();
+	if (ensure_result != "OK")
+	{
+		std::cerr << "Failed to enforce initial BETTER_AUTO mode: " << ensure_result << std::endl;
+	}
+
 	while (true)
 	{
 		client_socket = accept(server_socket, nullptr, nullptr);
@@ -195,7 +228,7 @@ int main()
 			continue;
 		}
 
-		std::cout << "Client connected" << std::endl;
+		on_client_connected();
 
 		while (true)
 		{
@@ -220,7 +253,7 @@ int main()
 		}
 
 		close(client_socket);
-		std::cout << "Client disconnected" << std::endl;
+		on_client_disconnected();
 	}
 
 	close(server_socket);

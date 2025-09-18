@@ -197,6 +197,13 @@ udevadm control --reload-rules && udevadm trigger || {
     echo "Warning: Failed to reload udev rules, continuing..."
 }
 
+if systemctl list-unit-files | grep -q '^victus-healthcheck.service'; then
+    echo "--> Running kernel health check..."
+    systemctl enable --now victus-healthcheck.service || {
+        echo "Warning: Failed to run victus-healthcheck.service"
+    }
+fi
+
 if systemctl list-unit-files | grep -q '^victus-backend.service'; then
     echo "--> Refreshing victus-backend.service state..."
     if systemctl is-enabled victus-backend.service >/dev/null 2>&1; then

@@ -10,6 +10,17 @@ install_data(
 )
 
 install_data(
+    'victus-healthcheck.service',
+    install_dir: '/etc/systemd/system'
+)
+
+install_data(
+    'victus-healthcheck.sh',
+    install_dir: '/usr/lib/victus-control',
+    install_mode: 'rwxr-xr-x'
+)
+
+install_data(
     'victus-control.rules',
     install_dir: '/etc/udev/rules.d'
 )

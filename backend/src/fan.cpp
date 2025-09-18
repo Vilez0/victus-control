@@ -778,6 +778,30 @@ std::string set_fan_mode(const std::string &mode)
     return result;
 }
 
+std::string ensure_better_auto_mode()
+{
+    bool needs_force = false;
+    {
+        std::lock_guard<std::mutex> lock(mode_mutex);
+        if (requested_mode != "BETTER_AUTO") {
+            needs_force = true;
+        } else if (!better_auto_running.load(std::memory_order_acquire)) {
+            needs_force = true;
+        }
+    }
+
+    if (!needs_force) {
+        return "OK";
+    }
+
+    std::cout << "Enforcing BETTER_AUTO mode" << std::endl;
+    auto result = set_fan_mode("BETTER_AUTO");
+    if (result == "OK") {
+        fan_mode_trigger("BETTER_AUTO");
+    }
+    return result;
+}
+
 std::string get_fan_speed(const std::string &fan_num)
 {
 	std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");

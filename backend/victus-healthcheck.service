@@ -1,0 +1,14 @@
+[Unit]
+Description=Victus Control kernel module health check
+DefaultDependencies=no
+After=systemd-modules-load.service
+Wants=systemd-modules-load.service
+Before=victus-backend.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/victus-control/victus-healthcheck.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
