@@ -11,7 +11,7 @@ VictusFanControl::VictusFanControl(std::shared_ptr<VictusSocketClient> client) :
 
 	update_current_state();
 
-	toggle_button = gtk_button_new_with_label(current_state == "AUTO" ? "Set Fan: AUTO" : "Set Fan: MAX");
+	toggle_button = gtk_button_new_with_label(("Set Fan: " + fan_mode_to_str(current_state)).c_str());
 	gtk_box_append(GTK_BOX(fan_page), toggle_button);
 	g_signal_connect(toggle_button, "clicked", G_CALLBACK(on_toggle_clicked), this);
 
@@ -19,7 +19,7 @@ VictusFanControl::VictusFanControl(std::shared_ptr<VictusSocketClient> client) :
 	gtk_box_append(GTK_BOX(fan_page), apply_button);
 	g_signal_connect(apply_button, "clicked", G_CALLBACK(on_apply_clicked), this);
 
-	state_label = gtk_label_new(("Current State: " + current_state).c_str());
+	state_label = gtk_label_new(("Current State: " + fan_mode_to_str(current_state)).c_str());
 	gtk_widget_set_halign(state_label, GTK_ALIGN_START);
 	gtk_box_append(GTK_BOX(fan_page), state_label);
 
@@ -51,23 +51,23 @@ void VictusFanControl::update_current_state()
 	auto response = socket_client->send_command_async(GET_FAN_MODE);
 	std::string fan_state = response.get();
 
-	if (fan_state == "AUTO" || fan_state == "MAX")
+	if (fan_state == "AUTO" || fan_state == "MANUAL" ||fan_state == "MAX")
 	{
-		current_state = fan_state;
+		current_state = str_to_fan_mode(fan_state);
 		automatic_mode = (fan_state == "AUTO");
 	}
 	else
 	{
 		std::cerr << "Error while getting fan information!" << fan_state << std::endl;
-		current_state = "AUTO";
+		current_state = FanMode::Auto;
 		automatic_mode = true;
 	}
 }
 
-void VictusFanControl::update_fan_mode(bool automatic)
+void VictusFanControl::update_fan_mode()
 {
-	automatic_mode = automatic;
-	gtk_button_set_label(GTK_BUTTON(toggle_button), automatic ? "Set Fan: AUTO" : "Set Fan: MAX");
+	std::string state = fan_mode_to_str(++current_state);
+	gtk_button_set_label(GTK_BUTTON(toggle_button), ("Set Fan: " + state).c_str());
 }
 
 void VictusFanControl::update_fan_speeds()
@@ -87,7 +87,7 @@ void VictusFanControl::update_fan_speeds()
 
 void VictusFanControl::update_state_label()
 {
-	std::string text = "Current State: " + current_state;
+	std::string text = "Current State: " + fan_mode_to_str(current_state);
 
 	gtk_label_set_text(GTK_LABEL(state_label), text.c_str());
 }
@@ -95,23 +95,32 @@ void VictusFanControl::update_state_label()
 void VictusFanControl::on_toggle_clicked(GtkWidget *widget, gpointer data)
 {
 	VictusFanControl *self = static_cast<VictusFanControl *>(data);
-
-	self->update_fan_mode(!self->automatic_mode);
+	self->update_fan_mode();
 }
 
 void VictusFanControl::on_apply_clicked(GtkWidget *widget, gpointer data)
 {
 	VictusFanControl *self = static_cast<VictusFanControl *>(data);
 
-	std::string command = self->automatic_mode ? "AUTO" : "MAX";
+	std::string command = fan_mode_to_str(self->current_state);
 
 	auto response = self->socket_client->send_command_async(SET_FAN_MODE, command);
 	std::string response2 = response.get();
 
 	if (response2 == "OK")
-		self->current_state = command;
+		self->current_state = self->str_to_fan_mode(command);
 	else
 		std::cerr << "Failed to change fan mode!" << response2 << std::endl;
 
 	self->update_state_label();
+}
+
+FanMode VictusFanControl::str_to_fan_mode(std::string mode)
+{
+	if (mode == "MAX")
+		return FanMode::Max;
+	else if (mode == "MANUAL")
+		return FanMode::Manual;
+	else
+		return FanMode::Auto;
 }
