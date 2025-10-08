@@ -24,6 +24,10 @@ private:
 	GtkWidget *fan2_speed_label;
 	GtkWidget *fan1_speed_slider;
 	GtkWidget *fan2_speed_slider;
+	GtkWidget *fan1_label_slider;
+	GtkWidget *fan2_label_slider;
+	GtkWidget *fan1_slider_box;
+	GtkWidget *fan2_slider_box;
 
 	bool automatic_mode;
 	FanMode current_state;
@@ -33,6 +37,8 @@ private:
 	void update_fan_speeds();
 	void update_state_label();
 	void update_current_state();
+	static void on_fan1_speed_changed(GtkRange *range, gpointer data);
+	static void on_fan2_speed_changed(GtkRange *range, gpointer data);
 
 	static void on_toggle_clicked(GtkWidget *widget, gpointer data);
 	static void on_apply_clicked(GtkWidget *widget, gpointer data);

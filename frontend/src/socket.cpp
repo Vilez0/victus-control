@@ -9,6 +9,7 @@ VictusSocketClient::VictusSocketClient(const std::string &path) : socket_path(pa
 {
 	command_prefix_map = {
 		{GET_FAN_SPEED, "GET_FAN_SPEED"},
+		{SET_FAN_SPEED, "SET_FAN_SPEED"},
 		{SET_FAN_MODE, "SET_FAN_MODE"},
 		{GET_FAN_MODE, "GET_FAN_MODE"},
 		{GET_KEYBOARD_COLOR, "GET_KEYBOARD_COLOR"},
