@@ -53,6 +53,9 @@ void handle_command(const std::string &command, int client_socket)
 		std::string value = command.substr(19);
 		response = set_keyboard_brightness(value);
 	}
+	else if (command.find("GET_FAN_MAX_SPEED") == 0) {
+		response = get_fan_max_speed(command.substr(18));
+	}
 	else
 		response = "ERROR: Unknown command";
 

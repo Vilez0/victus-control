@@ -21,8 +21,9 @@ VictusFanControl::VictusFanControl(std::shared_ptr<VictusSocketClient> client) :
 	g_signal_connect(apply_button, "clicked", G_CALLBACK(on_apply_clicked), this);
 
 	fan1_slider_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
-	// connect a signal to fan1 and fan2 sliders to update their values
-	fan1_speed_slider = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 65, 1);
+	auto resp = std::stoi((socket_client->send_command_async(GET_FAN_MAX_SPEED, "1")).get());
+	int fan1_max_speed = (resp != 0) ? resp : 4500;
+	fan1_speed_slider = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, fan1_max_speed/100, 1);
 	gtk_widget_set_hexpand(fan1_speed_slider, TRUE);
 	fan1_label_slider = gtk_label_new("Fan1 Speed: 0 RPM");
 	gtk_box_append(GTK_BOX(fan1_slider_box), fan1_speed_slider);
@@ -32,7 +33,9 @@ VictusFanControl::VictusFanControl(std::shared_ptr<VictusSocketClient> client) :
 	g_signal_connect(fan1_speed_slider, "value-changed", G_CALLBACK(on_fan1_speed_changed), this);
 
 	fan2_slider_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
-	fan2_speed_slider = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 65, 1);
+	resp = std::stoi((socket_client->send_command_async(GET_FAN_MAX_SPEED, "2")).get());
+	int fan2_max_speed = (resp != 0) ? resp : fan1_max_speed;
+	fan2_speed_slider = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, fan2_max_speed/100, 1);
 	gtk_widget_set_hexpand(fan2_speed_slider, TRUE);
 	fan2_label_slider = gtk_label_new("Fan2 Speed: 0 RPM");
 	gtk_box_append(GTK_BOX(fan2_slider_box), fan2_speed_slider);

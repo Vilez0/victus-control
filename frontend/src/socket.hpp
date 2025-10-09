@@ -9,6 +9,7 @@
 enum ServerCommands
 {
 	GET_FAN_SPEED,
+	GET_FAN_MAX_SPEED,
 	SET_FAN_SPEED,
 	SET_FAN_MODE,
 	GET_FAN_MODE,

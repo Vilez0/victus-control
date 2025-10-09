@@ -120,6 +120,38 @@ std::string get_fan_speed(const std::string &fan_num)
 	}
 }
 
+std::string get_fan_max_speed(const std::string &fan_num)
+{
+	std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
+
+	if (!hwmon_path.empty())
+	{
+		std::ifstream fan_file(hwmon_path + "/fan" + fan_num + "_max");
+
+		if (fan_file)
+		{
+			std::stringstream buffer;
+			buffer << fan_file.rdbuf();
+
+			std::string fan_speed = buffer.str();
+
+			fan_speed.erase(fan_speed.find_last_not_of(" \n\r\t") + 1);
+
+			return fan_speed;
+		}
+		else
+		{
+			std::cerr << "Failed to open fan max speed file. Error: " << strerror(errno) << std::endl;
+			return "ERROR: Unable to read fan max speed";
+		}
+	}
+	else
+	{
+		std::cerr << "Hwmon directory not found" << std::endl;
+		return "ERROR: Hwmon directory not found";
+	}
+}
+
 std::string set_fan_speed(const std::string &fan_num, const std::string &speed)
 {
 	std::cout << "Setting fan " << fan_num << " speed to " << speed << std::endl;
