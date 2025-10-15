@@ -23,6 +23,19 @@ void fan_mode_trigger(const std::string mode) {
     }).detach();
 }
 
+void manual_fan_speed_maintainer(const std::string fan_num, const std::string speed) {
+	std::thread([fan_num, speed]() {
+		while (true) {
+			if (get_fan_mode() != "MANUAL") {
+				break;
+			}
+
+			set_fan_speed(fan_num, speed);
+			std::this_thread::sleep_for(std::chrono::seconds(100));
+		}
+	}).detach();
+}
+
 std::string get_fan_mode()
 {
 	std::string hwmon_path = find_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
