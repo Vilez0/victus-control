@@ -7,6 +7,7 @@
 
 #include "fan.hpp"
 #include "keyboard.hpp"
+#include "util.hpp"
 
 #define SOCKET_DIR "/var/run/victus-control"
 #define SOCKET_PATH SOCKET_DIR "/victus_backend.sock"
@@ -26,15 +27,28 @@ void handle_command(const std::string &command, int client_socket)
 		response = set_fan_speed(fan_num, speed);
 		manual_fan_speed_maintainer(fan_num, speed);
 	}
+	else if (command == "GET_FAN_MODE")
+	{
+		response = get_fan_mode();
+	}
 	else if (command.find("SET_FAN_MODE") == 0)
 	{
 		std::string mode = command.substr(13); // 1 more char for the space
 		response = set_fan_mode(mode);
 		fan_mode_trigger(mode);
 	}
-	else if (command == "GET_FAN_MODE")
+	else if (command == "GET_FANS_CURVE")
 	{
-		response = get_fan_mode();
+		response = get_fans_curve();
+	}
+	else if (command.find("SET_FANS_CURVE") == 0)
+	{
+		std::string curve = command.substr(15);
+		response = set_fans_curve(curve);
+		fan_curve_monitor();
+	}
+	else if (command.find("GET_FAN_MAX_SPEED") == 0) {
+		response = get_fan_max_speed(command.substr(18));
 	}
 	else if (command == "GET_KEYBOARD_COLOR")
 	{
@@ -54,8 +68,9 @@ void handle_command(const std::string &command, int client_socket)
 		std::string value = command.substr(19);
 		response = set_keyboard_brightness(value);
 	}
-	else if (command.find("GET_FAN_MAX_SPEED") == 0) {
-		response = get_fan_max_speed(command.substr(18));
+	else if (command.find("GET_CPU_TEMP") == 0)
+	{
+		response = get_cpu_temperature();
 	}
 	else
 		response = "ERROR: Unknown command";

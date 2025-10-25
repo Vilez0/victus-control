@@ -10,6 +10,7 @@ enum class FanMode { Max, Manual, Auto, COUNT };
 class VictusFanControl
 {
 public:
+	GtkWidget *fan_page_scrollable;
 	GtkWidget *fan_page;
 
 	VictusFanControl(std::shared_ptr<VictusSocketClient> client);
@@ -18,16 +19,27 @@ public:
 
 private:
 	GtkWidget *toggle_button;
-	GtkWidget *apply_button;
-	GtkWidget *state_label;
-	GtkWidget *fan1_speed_label;
-	GtkWidget *fan2_speed_label;
+	GtkWidget *switch_curve_sliders_button;
+
 	GtkWidget *fan1_speed_slider;
 	GtkWidget *fan2_speed_slider;
 	GtkWidget *fan1_label_slider;
 	GtkWidget *fan2_label_slider;
 	GtkWidget *fan1_slider_box;
 	GtkWidget *fan2_slider_box;
+	GtkWidget *fans_slider_box;
+
+	GtkWidget *fan_curve_box;
+	GtkWidget *fan_curve_label_box;
+	GtkWidget *fan_curve_temp_label;
+	GtkWidget *fan_curve_fan1_speed_label;
+	GtkWidget *fan_curve_fan2_speed_label;
+	GtkWidget *fan_curve_add_button;
+
+	GtkWidget *apply_button;
+	GtkWidget *state_label;
+	GtkWidget *fan1_speed_label;
+	GtkWidget *fan2_speed_label;
 
 	bool automatic_mode;
 	FanMode current_state;
@@ -42,6 +54,12 @@ private:
 
 	static void on_toggle_clicked(GtkWidget *widget, gpointer data);
 	static void on_apply_clicked(GtkWidget *widget, gpointer data);
+	static void on_fan_curve_add_button_clicked(GtkWidget *widget, gpointer data);
+	static void on_fan_curve_remove_button_clicked(GtkWidget *widget, gpointer data);
+	static void sort_curve_rows(GtkWidget *widget, gpointer data);
+	static std::string extract_curve_string(gpointer data);
+	static void populate_curve_box(GtkWidget *widget, gpointer data);
+	static void on_switch_curve_sliders_clicked(GtkWidget *widget, gpointer data);
 
     static std::string fan_mode_to_str(FanMode mode) {
         switch (mode) {
