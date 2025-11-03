@@ -52,7 +52,7 @@ void manual_fan_speed_maintainer(const std::string fan_num, const std::string sp
 
 std::string get_fan_mode()
 {
-	std::string hwmon_path = find_hp_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
+	std::string hwmon_path = find_hp_hwmon_directory();
 
 	if (!hwmon_path.empty())
 	{
@@ -91,7 +91,7 @@ std::string get_fan_mode()
 
 std::string set_fan_mode(const std::string &mode)
 {
-	std::string hwmon_path = find_hp_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
+	std::string hwmon_path = find_hp_hwmon_directory();
 
 	if (!hwmon_path.empty())
 	{
@@ -117,7 +117,7 @@ std::string set_fan_mode(const std::string &mode)
 
 std::string get_fan_speed(const std::string &fan_num)
 {
-	std::string hwmon_path = find_hp_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
+	std::string hwmon_path = find_hp_hwmon_directory();
 
 	if (!hwmon_path.empty())
 	{
@@ -149,7 +149,7 @@ std::string get_fan_speed(const std::string &fan_num)
 
 std::string get_fan_max_speed(const std::string &fan_num)
 {
-	std::string hwmon_path = find_hp_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
+	std::string hwmon_path = find_hp_hwmon_directory();
 
 	if (!hwmon_path.empty())
 	{
@@ -185,7 +185,7 @@ std::string get_fan_max_speed(const std::string &fan_num)
 std::string set_fan_speed(const std::string &fan_num, const std::string &speed)
 {
 	std::cout << "Setting fan " << fan_num << " speed to " << speed << std::endl;
-	std::string hwmon_path = find_hp_hwmon_directory("/sys/devices/platform/hp-wmi/hwmon");
+	std::string hwmon_path = find_hp_hwmon_directory();
 
 	if (!hwmon_path.empty())
 	{

@@ -4,8 +4,9 @@
 #include <fstream>
 #include <dirent.h>
 
-std::string find_hp_hwmon_directory(const std::string &base_path)
+std::string find_hp_hwmon_directory()
 {
+	const std::string base_path = "/sys/devices/platform/hp-wmi/hwmon";
 	DIR *dir;
 	struct dirent *ent;
 	std::string hwmon_path;
