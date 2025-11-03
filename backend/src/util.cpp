@@ -71,3 +71,24 @@ std::string get_cpu_temperature()
 		return "ERROR: CPU Hwmon directory not found";
 	}
 }
+
+std::string get_driver_support_flags()
+{
+	std::string status_flags;
+	std::string hwmon_path = find_hp_hwmon_directory();
+
+	if (std::filesystem::exists(hwmon_path + "/fan1_target"))
+	{
+		status_flags += "FAN_CONTROL_SUPPORTED";
+	}
+	
+	if (std::filesystem::exists("/sys/class/leds/hp::kbd_backlight/multi_intensity"))
+	{
+		if (!status_flags.empty()) {
+			status_flags += ",";
+		}
+		status_flags += " KBD_BACKLIGHT_SUPPORTED";
+	}
+
+	return status_flags;
+}

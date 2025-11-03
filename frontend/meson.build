@@ -1,5 +1,5 @@
 executable('victus-control',
-  sources: ['src/main.cpp', 'src/keyboard.cpp', 'src/fan.cpp', 'src/about.cpp', 'src/socket.cpp'],
+  sources: ['src/main.cpp', 'src/keyboard.cpp', 'src/fan.cpp', 'src/about.cpp', 'src/socket.cpp', 'src/driver.cpp'],
   dependencies: dependency('gtk4'),
   install: true,
   install_dir: get_option('bindir'))

@@ -188,8 +188,9 @@ void handle_command(const std::string &command, int client_socket)
 	else if (command.find("GET_CPU_TEMP") == 0)
 	{
 		response = get_cpu_temperature();
-	}
-	else
+	} else if (command == "GET_DRIVER_SUPPORT_FLAGS") {
+		response = get_driver_support_flags();
+	} else
 		response = "ERROR: Unknown command";
 
 	if (send(client_socket, response.c_str(), response.length(), 0) < 0)

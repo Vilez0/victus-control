@@ -9,6 +9,7 @@
 #include "fan.hpp"
 #include "about.hpp"
 #include "socket.hpp"
+#include "driver.hpp"
 
 class VictusControl
 {
@@ -21,6 +22,7 @@ public:
 	std::shared_ptr<VictusSocketClient> socket_client;
 	VictusFanControl fan_control;
 	VictusKeyboardControl keyboard_control;
+	VictusDriverSupport driver_support;
 	VictusAbout about;
 
 	VictusControl()
@@ -31,6 +33,13 @@ public:
 		window = gtk_window_new();
 		gtk_window_set_title(GTK_WINDOW(window), "victus-control");
 		gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
+
+		if (keyboard_control.get_page() == nullptr &&
+		    fan_control.get_page() == nullptr) {
+		    driver_support = VictusDriverSupport();
+		    gtk_window_set_child(GTK_WINDOW(window), driver_support.get_page());			
+		    return;
+		}
 
 		notebook = gtk_notebook_new();
 		gtk_widget_set_hexpand(notebook, TRUE);

@@ -70,6 +70,8 @@ private:
         }
     }
 
+	bool is_fan_control_supported() const;
+
 	std::shared_ptr<VictusSocketClient> socket_client;
 };
 

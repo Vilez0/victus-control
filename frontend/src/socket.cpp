@@ -19,7 +19,8 @@ VictusSocketClient::VictusSocketClient(const std::string &path) : socket_path(pa
 		{SET_KEYBOARD_COLOR, "SET_KEYBOARD_COLOR"},
 		{GET_KBD_BRIGHTNESS, "GET_KBD_BRIGHTNESS"},
 		{SET_KBD_BRIGHTNESS, "SET_KBD_BRIGHTNESS"},
-		{GET_CPU_TEMP, "GET_CPU_TEMP"}
+		{GET_CPU_TEMP, "GET_CPU_TEMP"},
+		{GET_DRIVER_SUPPORT_FLAGS, "GET_DRIVER_SUPPORT_FLAGS"}
 	};
 
 	if (!connect_to_server())

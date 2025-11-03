@@ -121,9 +121,19 @@ void VictusFanControl::on_fan2_speed_changed(GtkRange *range, gpointer data)
 	gtk_label_set_text(GTK_LABEL(self->fan2_label_slider), ("Fan2 Speed: " + std::to_string(fan2_speed) + " RPM").c_str());
 }
 
+bool VictusFanControl::is_fan_control_supported() const
+{
+	auto response = socket_client->send_command_async(GET_DRIVER_SUPPORT_FLAGS);
+	std::string flags = response.get();
+	return (flags.find("FAN_CONTROL_SUPPORTED") != std::string::npos);
+}
 
 GtkWidget *VictusFanControl::get_page()
 {
+	if (!is_fan_control_supported())
+	{
+		return nullptr;
+	}
 	return fan_page_scrollable;
 }
 

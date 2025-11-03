@@ -39,8 +39,19 @@ VictusKeyboardControl::VictusKeyboardControl(std::shared_ptr<VictusSocketClient>
 	update_current_color_label(this);
 }
 
+bool VictusKeyboardControl::is_keyboard_backlight_supported() const
+{
+	auto response = socket_client->send_command_async(GET_DRIVER_SUPPORT_FLAGS);
+	std::string flags = response.get();
+	return (flags.find("KBD_BACKLIGHT_SUPPORTED") != std::string::npos);
+}
+
 GtkWidget *VictusKeyboardControl::get_page()
 {
+	if (!is_keyboard_backlight_supported())
+	{
+		return nullptr;
+	}
 	return keyboard_page;
 }
 

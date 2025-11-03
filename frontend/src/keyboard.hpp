@@ -35,6 +35,8 @@ private:
 	static void on_apply_clicked(GtkWidget *widget, gpointer data);
 	static void update_current_color_label(gpointer data);
 
+	bool is_keyboard_backlight_supported() const;
+
 	std::shared_ptr<VictusSocketClient> socket_client;
 };
 
