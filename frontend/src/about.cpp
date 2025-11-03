@@ -8,8 +8,8 @@ VictusAbout::VictusAbout()
 
 	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(about_dialog), "victus-control");
 	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(about_dialog), "1.0");
-	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(about_dialog), "betelqeyza");
-	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about_dialog), "nothing :P");
+	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(about_dialog), "betelqeyza and vilez");
+	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about_dialog), "https://github.com/Vilez0/victus-control");
 
 	GdkTexture *texture = gdk_texture_new_from_filename("/usr/share/icons/hicolor/48x48/apps/victus-icon.svg", NULL);
 
