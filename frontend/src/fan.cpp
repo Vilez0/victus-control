@@ -50,6 +50,7 @@ VictusFanControl::VictusFanControl(std::shared_ptr<VictusSocketClient> client) :
 	gtk_box_append(GTK_BOX(fans_slider_box), fan2_slider_box);
 	gtk_widget_set_visible(fans_slider_box, (current_state == FanMode::Manual)); // hide the manual sliders by default
 	gtk_box_append(GTK_BOX(fan_page), fans_slider_box);
+	g_signal_connect(fans_slider_box, "show", G_CALLBACK(populate_fan_sliders_box), this);
 
 	/*
 		Fan Curve UI will be like a table:
@@ -149,7 +150,19 @@ void VictusFanControl::update_fan_mode()
 	std::string state = fan_mode_to_str(++current_state);
 	gtk_button_set_label(GTK_BUTTON(toggle_button), ("Set Fan: " + state).c_str());
 	bool manual_mode = (state == "MANUAL");
-	gtk_widget_set_visible(fans_slider_box, manual_mode);
+
+	std::string fans_curve = socket_client->send_command_async(GET_FANS_CURVE).get();
+	if (fans_curve != "" && fans_curve != "1/;2/" && manual_mode) {
+		gtk_widget_set_visible(fan_curve_box, true);
+		gtk_widget_set_visible(fans_slider_box, false);
+	} else if (manual_mode) {
+		gtk_widget_set_visible(fan_curve_box, false);
+		gtk_widget_set_visible(fans_slider_box, true);
+	} else {
+		gtk_widget_set_visible(fan_curve_box, false);
+		gtk_widget_set_visible(fans_slider_box, false);
+	}
+
 	gtk_widget_set_visible(switch_curve_sliders_button, manual_mode);
 }
 
@@ -390,6 +403,22 @@ void VictusFanControl::populate_curve_box(GtkWidget *widget, gpointer data)
 			gtk_spin_button_set_value(GTK_SPIN_BUTTON(fan2_entry), fan2_points[i].second);
 		}
 	}
+}
+
+void VictusFanControl::populate_fan_sliders_box(GtkWidget *widget, gpointer data) 
+{
+	VictusFanControl *self = static_cast<VictusFanControl *>(data);
+
+	auto response1 = self->socket_client->send_command_async(GET_FAN_SPEED, "1");
+	std::string fan1_speed_str = response1.get();
+	int fan1_speed = std::stoi(fan1_speed_str);
+
+	auto response2 = self->socket_client->send_command_async(GET_FAN_SPEED, "2");
+	std::string fan2_speed_str = response2.get();
+	int fan2_speed = std::stoi(fan2_speed_str);
+
+	gtk_range_set_value(GTK_RANGE(self->fan1_speed_slider), fan1_speed / 100.0);
+	gtk_range_set_value(GTK_RANGE(self->fan2_speed_slider), fan2_speed / 100.0);
 }
 
 void VictusFanControl::on_switch_curve_sliders_clicked(GtkWidget *widget, gpointer data)

@@ -59,6 +59,7 @@ private:
 	static void sort_curve_rows(GtkWidget *widget, gpointer data);
 	static std::string extract_curve_string(gpointer data);
 	static void populate_curve_box(GtkWidget *widget, gpointer data);
+	static void populate_fan_sliders_box(GtkWidget *widget, gpointer data);
 	static void on_switch_curve_sliders_clicked(GtkWidget *widget, gpointer data);
 
     static std::string fan_mode_to_str(FanMode mode) {
