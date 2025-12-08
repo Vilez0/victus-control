@@ -84,3 +84,8 @@ Any contribution is welcome!!
 
 ## License
 This project is licensed under the GPL3 License. See the LICENSE file for more details.
+
+## Screenshots
+![RGB Colors](./assets/color_page.jpeg)
+![Manual Sliders](./assets/fan_page_manual_sliders.jpeg)
+![Manual Curve](./assets/fan_page_manual_curve.jpeg)
