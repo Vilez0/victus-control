@@ -134,7 +134,6 @@ void handle_command(const std::string &command, int client_socket)
 		std::string fan_num = command.substr(14, 1);
 		std::string speed = command.substr(16);
 		response = set_fan_speed(fan_num, speed);
-		manual_fan_speed_maintainer(fan_num, speed);
         remove_config_key("fan_curve_settings");
         handle_write_config("fan" + fan_num + "_slider_settings", speed);
 	}

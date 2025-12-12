@@ -1,7 +1,5 @@
-#include <array>
 #include <iostream>
 #include <fstream>
-#include <stop_token>
 #include <sstream>
 #include <sys/un.h>
 #include <thread>
@@ -27,27 +25,6 @@ void fan_mode_trigger(const std::string mode) {
             std::this_thread::sleep_for(std::chrono::seconds(100));
         }
     }).detach();
-}
-
-void manual_fan_speed_maintainer(const std::string fan_num, const std::string speed) {
-    int num = std::stoi(fan_num);
-    if (num < 1 || num > 2) return;
-
-    auto &worker = fan_threads[num - 1];
-    if (worker.joinable()) {
-        worker.request_stop();
-        worker.join();
-    }
-
-    worker = std::jthread([fan_num, speed](std::stop_token stop_token) {
-        while (!stop_token.stop_requested() && get_fan_mode() == "MANUAL") {
-            set_fan_speed(fan_num, speed);
-
-            for (int i = 0; i < 100 && !stop_token.stop_requested(); ++i) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
-        }
-    });
 }
 
 std::string get_fan_mode()
